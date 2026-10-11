@@ -1,0 +1,6 @@
+{
+  "name": "Smart Rakshak — Cloud Robot Control Center",
+  "description": "Mission-critical cloud control and telemetry center for the ACEBOTT QD001 smart robot featuring device polling, low-latency motor control, emergency stop safety watchdog, cloud camera capture, and Gemini AI readiness.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
