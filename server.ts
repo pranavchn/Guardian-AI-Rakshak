@@ -8,7 +8,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
-import { apiRouter } from './server/routes.js';
+import { apiRouter } from './server/routes.ts';
 
 dotenv.config();
 

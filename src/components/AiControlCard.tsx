@@ -116,7 +116,7 @@ export const AiControlCard: React.FC<AiControlCardProps> = ({ onExecuteCommand, 
         setResult(data.translation);
       }
     } catch (err) {
-      console.error('AI translation error:', err);
+      console.warn('AI translation notice:', err);
     } finally {
       setIsTranslating(false);
     }

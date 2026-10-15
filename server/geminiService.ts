@@ -8,7 +8,7 @@
  */
 
 import { GoogleGenAI } from '@google/genai';
-import { RobotCommandType } from '../src/types/robot.js';
+import type { RobotCommandType } from '../src/types/robot.ts';
 
 export interface ValidatedAiCommandResult {
   valid: boolean;

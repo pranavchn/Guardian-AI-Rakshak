@@ -8,12 +8,12 @@
  * - /api/system/* : System mode, Firestore metadata, audit logs, and hardware integration specs
  */
 
-import { Request, Response, Router } from 'express';
-import { geminiService } from './geminiService.js';
-import { dataStore } from './store.js';
-import { DeviceAckPayload, DeviceHeartbeatPayload, RobotCommandType } from '../src/types/robot.js';
+import express, { type Request, type Response } from 'express';
+import { geminiService } from './geminiService.ts';
+import { dataStore } from './store.ts';
+import type { DeviceAckPayload, DeviceHeartbeatPayload, RobotCommandType } from '../src/types/robot.ts';
 
-export const apiRouter = Router();
+export const apiRouter = express.Router();
 
 // ==========================================
 // DEVICE AUTHENTICATION MIDDLEWARE

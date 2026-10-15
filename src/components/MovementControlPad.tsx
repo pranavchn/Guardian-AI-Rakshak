@@ -120,26 +120,63 @@ export const MovementControlPad: React.FC<MovementControlPadProps> = ({
       }
     };
 
+    const handleWindowBlur = () => {
+      if (holdToRun) {
+        onRelease('STOP');
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleWindowBlur);
+    document.addEventListener('visibilitychange', handleWindowBlur);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleWindowBlur);
+      document.removeEventListener('visibilitychange', handleWindowBlur);
     };
   }, [holdToRun, onPress, onRelease, onEmergencyStop]);
 
   // Helper to attach pointer events for tactile press/release
   const makePressHandlers = (command: RobotCommandType) => ({
-    onPointerDown: (e: React.PointerEvent) => {
+    onPointerDown: (e: React.PointerEvent<HTMLButtonElement>) => {
       e.preventDefault();
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {
+        // Fallback if browser doesn't support pointer capture
+      }
       onPress(command);
     },
-    onPointerUp: (e: React.PointerEvent) => {
+    onPointerUp: (e: React.PointerEvent<HTMLButtonElement>) => {
       e.preventDefault();
+      try {
+        if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+          e.currentTarget.releasePointerCapture(e.pointerId);
+        }
+      } catch {
+        // Fallback
+      }
       onRelease(command);
     },
-    onPointerLeave: (e: React.PointerEvent) => {
+    onPointerCancel: (e: React.PointerEvent<HTMLButtonElement>) => {
       e.preventDefault();
+      try {
+        if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+          e.currentTarget.releasePointerCapture(e.pointerId);
+        }
+      } catch {
+        // Fallback
+      }
+      onRelease(command);
+    },
+    onPointerLeave: (e: React.PointerEvent<HTMLButtonElement>) => {
+      e.preventDefault();
+      // If pointer is captured, do not prematurely stop on element boundary shrink
+      if (e.currentTarget.hasPointerCapture?.(e.pointerId)) {
+        return;
+      }
       onRelease(command);
     },
     onContextMenu: (e: React.MouseEvent) => e.preventDefault(),

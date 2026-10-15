@@ -68,7 +68,7 @@ export default function App() {
         refreshData();
       }
     } catch (err) {
-      console.error('Vision analysis error:', err);
+      console.warn('Vision analysis notice:', err);
     } finally {
       setIsAnalyzingVision(false);
     }

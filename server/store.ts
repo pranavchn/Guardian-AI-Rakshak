@@ -22,7 +22,7 @@
  */
 
 import { Firestore } from '@google-cloud/firestore';
-import {
+import type {
   CameraImageRecord,
   CommandStatus,
   DeviceAckPayload,
@@ -32,7 +32,7 @@ import {
   RobotStatus,
   SystemAuditLog,
   SystemModeConfig,
-} from '../src/types/robot.js';
+} from '../src/types/robot.ts';
 
 export class RobotDataStore {
   private firestore: Firestore | null = null;
@@ -52,8 +52,8 @@ export class RobotDataStore {
   private config: SystemModeConfig = {
     mode: 'DEMO', // DEMO mode uses in-memory; CLOUD mode persists to Firestore
     controlMode: 'CLOUD',
-    localIpAddress: '192.168.4.1',
-    localPort: 80,
+    localIpAddress: '192.168.31.137',
+    localPort: 81,
     autoSimulatePolling: false,
   };
 
