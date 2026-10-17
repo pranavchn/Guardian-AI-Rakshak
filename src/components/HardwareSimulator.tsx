@@ -82,7 +82,7 @@ export const HardwareSimulator: React.FC<HardwareSimulatorProps> = ({
             </div>
 
             <p className="text-xs text-slate-400">
-              When physical QD001 is offline, you can trigger simulated device cycles to test command consumption, watchdog heartbeats, and camera frame generation.
+              When the physical robot is offline, you can trigger simulated device cycles to test command consumption, watchdog heartbeats, and camera frame generation.
             </p>
 
             <div className="flex flex-wrap gap-2 pt-1">

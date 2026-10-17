@@ -1,6 +1,6 @@
 /**
  * Smart Rakshak — Camera & Optical Telemetry View
- * ACEBOTT ESP32-CAM OV2640 Module
+ * ESP32-CAM OV2640 Optical Module
  */
 
 import React, { useState } from 'react';

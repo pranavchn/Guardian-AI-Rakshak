@@ -6,8 +6,8 @@
  * or exposing service-account JSON keys.
  *
  * Firestore Database Target:
- * - GCP Project ID: qd00n-ai-robot
- * - Firestore Database ID: qd00n-ai-robot-db
+ * - GCP Project ID: smart-rakshak-robot
+ * - Firestore Database ID: (default)
  * - Region: asia-south1
  *
  * Collections:
@@ -32,6 +32,9 @@ import type {
   RobotStatus,
   SystemAuditLog,
   SystemModeConfig,
+  HelperAssistanceEvent,
+  GuardianSafetyEvent,
+  ProtectionSafetyEvent,
 } from '../src/types/robot.ts';
 
 export class RobotDataStore {
@@ -48,6 +51,9 @@ export class RobotDataStore {
   private heartbeats: DeviceHeartbeatPayload[] = [];
   private images: CameraImageRecord[] = [];
   private auditLogs: SystemAuditLog[] = [];
+  private helperEvents: HelperAssistanceEvent[] = [];
+  private guardianEvents: GuardianSafetyEvent[] = [];
+  private protectionEvents: ProtectionSafetyEvent[] = [];
 
   private config: SystemModeConfig = {
     mode: 'DEMO', // DEMO mode uses in-memory; CLOUD mode persists to Firestore
@@ -63,18 +69,18 @@ export class RobotDataStore {
   private deviceAuthToken: string;
 
   constructor() {
-    this.defaultRobotId = process.env.DEFAULT_ROBOT_ID || 'QD001';
+    this.defaultRobotId = process.env.DEFAULT_ROBOT_ID || 'SR-01';
     this.deviceAuthToken = process.env.DEVICE_AUTH_TOKEN ? process.env.DEVICE_AUTH_TOKEN.trim() : '';
     this.heartbeatTimeoutMs = parseInt(process.env.HEARTBEAT_TIMEOUT_MS || '15000', 10);
     this.commandExpirationMs = parseInt(process.env.COMMAND_EXPIRATION_MS || '10000', 10);
 
-    this.firestoreProjectId = process.env.GCP_PROJECT_ID || process.env.FIRESTORE_PROJECT_ID || 'qd00n-ai-robot';
-    this.firestoreDatabaseId = process.env.FIRESTORE_DATABASE_ID || 'qd00n-ai-robot-db';
+    this.firestoreProjectId = process.env.GCP_PROJECT_ID || process.env.FIRESTORE_PROJECT_ID || 'smart-rakshak-robot';
+    this.firestoreDatabaseId = process.env.FIRESTORE_DATABASE_ID || '(default)';
 
     const now = new Date().toISOString();
     this.robot = {
       robotId: this.defaultRobotId,
-      name: 'Smart Rakshak — ACEBOTT QD001',
+      name: 'Smart Rakshak — Physical AI Robot',
       online: false,
       lastSeen: new Date(Date.now() - 30000).toISOString(),
       firmwareVersion: 'v2.4.1-cloud-rakshak',
@@ -233,12 +239,19 @@ export class RobotDataStore {
         'robotHeartbeats',
         'cameraImages',
         'systemLogs',
+        'helperEvents',
+        'guardianEvents',
+        'protectionEvents',
       ],
     };
   }
 
   public getDeviceToken(): string {
     return process.env.DEVICE_AUTH_TOKEN ? process.env.DEVICE_AUTH_TOKEN.trim() : '';
+  }
+
+  public getDefaultRobotId(): string {
+    return this.defaultRobotId;
   }
 
   public getConfig(): SystemModeConfig {
@@ -897,7 +910,54 @@ export class RobotDataStore {
     return null;
   }
 
+  /**
+   * Records a direct local dispatch command execution into commandHistory and telemetry
+   * without enqueuing it into pendingCommands. Prevents LOCAL mode commands from polluting
+   * the demo queue or appearing as expired/cancelled.
+   */
+  public recordLocalCommand(command: RobotCommand): void {
+    const now = new Date().toISOString();
+    this.commandHistory.unshift(command);
+    if (this.commandHistory.length > 200) this.commandHistory.pop();
+
+    if (command.command === 'STOP' || command.command === 'EMERGENCY_STOP') {
+      this.robot.currentCommand = command.command;
+    } else if (['FORWARD', 'BACKWARD', 'LEFT', 'RIGHT'].includes(command.command)) {
+      this.robot.currentCommand = command.command;
+    }
+
+    if (command.speed !== undefined) {
+      this.robot.speed = Math.max(1, Math.min(5, command.speed));
+    }
+    if (command.servo !== undefined) {
+      this.robot.servoAngle = Math.max(0, Math.min(180, command.servo));
+    }
+
+    if (command.status === 'COMPLETED') {
+      this.robot.totalCommandsExecuted += 1;
+    }
+    this.robot.updatedAt = now;
+
+    this.logAudit(
+      'COMMAND',
+      command.status === 'COMPLETED' ? 'INFO' : 'WARN',
+      `Local dispatch ${command.command}: ${command.status}`,
+      {
+        commandId: command.commandId,
+        speed: command.speed,
+        servo: command.servo,
+        details: command.ackDetails?.details,
+      }
+    );
+  }
+
   public async getPendingCommands(robotId: string = this.defaultRobotId): Promise<RobotCommand[]> {
+    // In LOCAL mode, commands are dispatched directly without queuing.
+    // Return empty array so stale demo queue commands do not show as expiring/cancelled.
+    if (this.config.controlMode === 'LOCAL') {
+      return [];
+    }
+
     this.checkTimeouts();
 
     if (this.isFirestoreActive()) {
@@ -1395,7 +1455,7 @@ export class RobotDataStore {
       <circle cx="320" cy="285" r="14" fill="#f59e0b" fill-opacity="0.2" stroke="#f59e0b" stroke-width="2"/>
       <line x1="320" y1="210" x2="320" y2="350" stroke="#38bdf8" stroke-width="1" stroke-dasharray="4,4"/>
       <line x1="250" y1="285" x2="390" y2="285" stroke="#38bdf8" stroke-width="1" stroke-dasharray="4,4"/>
-      <text x="24" y="38" fill="#38bdf8" font-family="monospace" font-size="14" font-weight="bold">ESP32-CAM FEED // QD001 OV2640</text>
+      <text x="24" y="38" fill="#38bdf8" font-family="monospace" font-size="14" font-weight="bold">ESP32-CAM FEED // SMART RAKSHAK OV2640</text>
       <text x="24" y="58" fill="#94a3b8" font-family="monospace" font-size="11">VGA 640x480 · JPEG QUALITY: 12 · FPS: 15</text>
       <text x="460" y="38" fill="#22c55e" font-family="monospace" font-size="13">STATUS: NOMINAL</text>
       <text x="460" y="58" fill="#94a3b8" font-family="monospace" font-size="11">EXPOSURE: AUTO</text>
@@ -1421,6 +1481,186 @@ export class RobotDataStore {
         analyzedAt: new Date().toISOString(),
       },
     });
+  }
+
+  /**
+   * Helper Mode Assistance Events Storage
+   */
+  public async recordHelperEvent(
+    event: Omit<HelperAssistanceEvent, 'eventId' | 'timestamp'>
+  ): Promise<HelperAssistanceEvent> {
+    const eventId = `helper_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const fullEvent: HelperAssistanceEvent = {
+      eventId,
+      timestamp: new Date().toISOString(),
+      ...event,
+      persistedToFirestore: false,
+    };
+
+    if (this.isFirestoreActive()) {
+      try {
+        const db = this.getFirestoreClient();
+        await db.collection('helperEvents').doc(eventId).set(fullEvent);
+        fullEvent.persistedToFirestore = true;
+      } catch (err) {
+        console.warn('Failed to persist helper event to Firestore:', err);
+      }
+    }
+
+    this.helperEvents.unshift(fullEvent);
+    if (this.helperEvents.length > 50) this.helperEvents.pop();
+
+    this.logAudit('AI', 'INFO', `Helper Mode Event [${fullEvent.category}]: ${fullEvent.summary}`, {
+      eventId,
+      status: fullEvent.status,
+    });
+
+    return fullEvent;
+  }
+
+  public async getHelperEvents(limit: number = 25): Promise<{ events: HelperAssistanceEvent[]; firestoreConnected: boolean }> {
+    if (this.isFirestoreActive()) {
+      try {
+        const db = this.getFirestoreClient();
+        const snap = await db
+          .collection('helperEvents')
+          .orderBy('timestamp', 'desc')
+          .limit(limit)
+          .get();
+
+        if (!snap.empty) {
+          const events = snap.docs.map((d) => d.data() as HelperAssistanceEvent);
+          return { events, firestoreConnected: true };
+        }
+      } catch (err) {
+        console.warn('Firestore helperEvents fetch failed, using in-memory:', err);
+      }
+    }
+
+    return {
+      events: this.helperEvents.slice(0, limit),
+      firestoreConnected: this.isFirestoreConnected && this.isFirestoreActive(),
+    };
+  }
+
+  /**
+   * Guardian Mode Safety Events Storage
+   */
+  public async recordGuardianEvent(
+    event: Omit<GuardianSafetyEvent, 'eventId' | 'timestamp'>
+  ): Promise<GuardianSafetyEvent> {
+    const eventId = `guardian_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const fullEvent: GuardianSafetyEvent = {
+      eventId,
+      timestamp: new Date().toISOString(),
+      ...event,
+      persistedToFirestore: false,
+    };
+
+    if (this.isFirestoreActive()) {
+      try {
+        const db = this.getFirestoreClient();
+        await db.collection('guardianEvents').doc(eventId).set(fullEvent);
+        fullEvent.persistedToFirestore = true;
+      } catch (err) {
+        console.warn('Failed to persist guardian event to Firestore:', err);
+      }
+    }
+
+    this.guardianEvents.unshift(fullEvent);
+    if (this.guardianEvents.length > 50) this.guardianEvents.pop();
+
+    this.logAudit('AI', 'INFO', `Guardian Mode Event [${fullEvent.category}]: ${fullEvent.summary}`, {
+      eventId,
+      status: fullEvent.status,
+    });
+
+    return fullEvent;
+  }
+
+  public async getGuardianEvents(limit: number = 25): Promise<{ events: GuardianSafetyEvent[]; firestoreConnected: boolean }> {
+    if (this.isFirestoreActive()) {
+      try {
+        const db = this.getFirestoreClient();
+        const snap = await db
+          .collection('guardianEvents')
+          .orderBy('timestamp', 'desc')
+          .limit(limit)
+          .get();
+
+        if (!snap.empty) {
+          const events = snap.docs.map((d) => d.data() as GuardianSafetyEvent);
+          return { events, firestoreConnected: true };
+        }
+      } catch (err) {
+        console.warn('Firestore guardianEvents fetch failed, using in-memory:', err);
+      }
+    }
+
+    return {
+      events: this.guardianEvents.slice(0, limit),
+      firestoreConnected: this.isFirestoreConnected && this.isFirestoreActive(),
+    };
+  }
+
+  /**
+   * Protection Mode Safety Events Storage
+   */
+  public async recordProtectionEvent(
+    event: Omit<ProtectionSafetyEvent, 'eventId' | 'timestamp'>
+  ): Promise<ProtectionSafetyEvent> {
+    const eventId = `protection_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const fullEvent: ProtectionSafetyEvent = {
+      eventId,
+      timestamp: new Date().toISOString(),
+      ...event,
+      persistedToFirestore: false,
+    };
+
+    if (this.isFirestoreActive()) {
+      try {
+        const db = this.getFirestoreClient();
+        await db.collection('protectionEvents').doc(eventId).set(fullEvent);
+        fullEvent.persistedToFirestore = true;
+      } catch (err) {
+        console.warn('Failed to persist protection event to Firestore:', err);
+      }
+    }
+
+    this.protectionEvents.unshift(fullEvent);
+    if (this.protectionEvents.length > 50) this.protectionEvents.pop();
+
+    this.logAudit('AI', 'INFO', `Protection Mode Event [${fullEvent.assessmentCategory}]: ${fullEvent.shortSummary}`, {
+      eventId,
+      status: fullEvent.status,
+    });
+
+    return fullEvent;
+  }
+
+  public async getProtectionEvents(limit: number = 25): Promise<{ events: ProtectionSafetyEvent[]; firestoreConnected: boolean }> {
+    if (this.isFirestoreActive()) {
+      try {
+        const db = this.getFirestoreClient();
+        const snap = await db
+          .collection('protectionEvents')
+          .orderBy('timestamp', 'desc')
+          .limit(limit)
+          .get();
+
+        if (!snap.empty) {
+          const events = snap.docs.map((d) => d.data() as ProtectionSafetyEvent);
+          return { events, firestoreConnected: true };
+        }
+      } catch (err) {
+        console.warn('Firestore protectionEvents fetch failed, using in-memory:', err);
+      }
+    }
+
+    return {
+      events: this.protectionEvents.slice(0, limit),
+      firestoreConnected: this.isFirestoreConnected && this.isFirestoreActive(),
+    };
   }
 }
 

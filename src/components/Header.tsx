@@ -50,13 +50,13 @@ export const Header: React.FC<HeaderProps> = ({
                 SMART RAKSHAK
               </span>
               <span className="text-xs text-slate-400 hidden sm:inline">
-                ACEBOTT QD001
+                Physical AI Robot
               </span>
             </div>
             <div className="text-xs text-slate-400 flex items-center gap-2">
               <span>Cloud Robot Control Center</span>
               <span aria-hidden="true">·</span>
-              <span className="font-mono tabular-nums">{status?.robotId || 'QD001'}</span>
+              <span className="font-mono tabular-nums">{status?.robotId || 'SR-01'}</span>
             </div>
           </div>
         </div>

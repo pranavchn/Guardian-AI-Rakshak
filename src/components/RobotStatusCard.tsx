@@ -1,6 +1,6 @@
 /**
  * Smart Rakshak — Robot Status & Telemetry Card
- * Displays real physical status from Firestore robots/QD001 document
+ * Displays real physical status from Firestore robots collection
  */
 
 import React from 'react';
@@ -76,12 +76,12 @@ export const RobotStatusCard: React.FC<RobotStatusCardProps> = ({
           {config.mode === 'DEMO' ? (
             <span className="text-amber-400">In-Memory (DEMO isolated)</span>
           ) : config.controlMode === 'CLOUD' ? (
-            <span className="text-emerald-400">{firestoreInfo?.databaseId || 'qd00n-ai-robot-db'}</span>
+            <span className="text-emerald-400">{firestoreInfo?.databaseId || '(default)'}</span>
           ) : (
             <span className="text-indigo-400">Local Direct</span>
           )}
           <span className="text-slate-600"> · </span>
-          <span className="text-sky-400">robots/{status?.robotId || 'QD001'}</span>
+          <span className="text-sky-400">robots/{status?.robotId || 'SR-01'}</span>
         </div>
       </div>
 
@@ -229,7 +229,7 @@ export const RobotStatusCard: React.FC<RobotStatusCardProps> = ({
           {config.mode === 'DEMO'
             ? 'In-memory data only. Zero read/write to Firestore.'
             : config.controlMode === 'CLOUD'
-            ? 'Persisting live telemetry & commands to Firestore (qd00n-ai-robot-db).'
+            ? `Persisting live telemetry & commands to Firestore (${firestoreInfo?.databaseId || '(default)'}).`
             : 'Local ESP32 network control.'}
         </div>
       </div>

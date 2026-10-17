@@ -1,6 +1,6 @@
 /**
  * Smart Rakshak — Cloud Robot Control Center
- * ACEBOTT QD001 Physical Robot Platform
+ * Multi-Mission Physical AI Robot Platform
  */
 
 import React, { useState } from 'react';
@@ -14,6 +14,8 @@ import { CommandHistoryTable } from './components/CommandHistoryTable.js';
 import { CameraGalleryModal } from './components/CameraGalleryModal.js';
 import { ArchitectureDocs } from './components/ArchitectureDocs.js';
 import { HardwareSimulator } from './components/HardwareSimulator.js';
+import { RobotModesTab } from './components/RobotModesTab.js';
+import { LayoutDashboard, Bot } from 'lucide-react';
 import { CameraImageRecord, RobotCommandType } from './types/robot.js';
 
 export default function App() {
@@ -44,11 +46,12 @@ export default function App() {
     updateModeConfig,
     simulateCycle,
     refreshData,
-  } = useRobotControl('QD001');
+  } = useRobotControl('SR-01');
 
   const [selectedImage, setSelectedImage] = useState<CameraImageRecord | null>(null);
   const [isArchitectureDocsOpen, setIsArchitectureDocsOpen] = useState<boolean>(false);
   const [isAnalyzingVision, setIsAnalyzingVision] = useState<boolean>(false);
+  const [activeMainTab, setActiveMainTab] = useState<'control' | 'modes'>('control');
 
   // Trigger Gemini Vision Analysis
   const handleTriggerAiAnalysis = async (imageId?: string) => {
@@ -100,83 +103,148 @@ export default function App() {
         onOpenDocs={() => setIsArchitectureDocsOpen(true)}
       />
 
+      {/* Primary Navigation Tabs */}
+      <nav aria-label="Application Tabs" className="border-b border-slate-800 bg-slate-950/80 backdrop-blur px-4 sm:px-6 sticky top-16 z-30">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 py-2.5">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setActiveMainTab('control')}
+              className={`cursor-pointer px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all ${
+                activeMainTab === 'control'
+                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent'
+              }`}
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              <span>Control Center</span>
+            </button>
+
+            <button
+              onClick={() => setActiveMainTab('modes')}
+              className={`cursor-pointer px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all relative ${
+                activeMainTab === 'modes'
+                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md shadow-amber-500/20'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent'
+              }`}
+            >
+              <Bot className="w-4 h-4" />
+              <span>Robot Modes </span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold uppercase ${
+                activeMainTab === 'modes'
+                  ? 'bg-slate-950/20 text-slate-950'
+                  : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+              }`}>
+                3 Personas
+              </span>
+            </button>
+          </div>
+
+          <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400 font-mono">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>
+              {activeMainTab === 'control'
+                ? 'Standard Pilot & Telemetry View'
+                : '1 Robot · Helper, Guardian & Protection Modes'}
+            </span>
+          </div>
+        </div>
+      </nav>
+
       {/* Main Command Dashboard Layout */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
-        {/* Top 3-Column Responsive Control Grid: Camera (Left), Drive Pad (Center), Diagnostics (Right) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-          {/* Left Column: Optical Feed & Camera HUD (4 cols on desktop) */}
-          <section className="lg:col-span-4 flex flex-col">
-            <CameraView
-              status={status}
-              images={images}
-              isCapturing={isCapturing}
-              onCapture={triggerCameraCapture}
-              onSelectImage={(img) => setSelectedImage(img)}
-              onTriggerAiAnalysis={handleTriggerAiAnalysis}
-              isAnalyzingVision={isAnalyzingVision}
-            />
-          </section>
+        {activeMainTab === 'control' ? (
+          <>
+            {/* Top 3-Column Responsive Control Grid: Camera (Left), Drive Pad (Center), Diagnostics (Right) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+              {/* Left Column: Optical Feed & Camera HUD (4 cols on desktop) */}
+              <section className="lg:col-span-4 flex flex-col">
+                <CameraView
+                  status={status}
+                  images={images}
+                  isCapturing={isCapturing}
+                  onCapture={triggerCameraCapture}
+                  onSelectImage={(img) => setSelectedImage(img)}
+                  onTriggerAiAnalysis={handleTriggerAiAnalysis}
+                  isAnalyzingVision={isAnalyzingVision}
+                />
+              </section>
 
-          {/* Center Column: Tactile Movement Pad & Motors (4 cols on desktop) */}
-          <section className="lg:col-span-4 flex flex-col">
-            <MovementControlPad
-              status={status}
-              speed={speed}
-              servoAngle={servoAngle}
-              activePressedCommand={activePressedCommand}
-              holdToRun={holdToRun}
-              onSetHoldToRun={setHoldToRun}
-              onPress={handleMovementPress}
-              onRelease={handleMovementRelease}
-              onSpeedChange={handleSpeedChange}
-              onServoChange={handleServoChange}
-              onEmergencyStop={sendEmergencyStop}
-              lastActionStatus={lastActionStatus}
-            />
-          </section>
+              {/* Center Column: Tactile Movement Pad & Motors (4 cols on desktop) */}
+              <section className="lg:col-span-4 flex flex-col">
+                <MovementControlPad
+                  status={status}
+                  speed={speed}
+                  servoAngle={servoAngle}
+                  activePressedCommand={activePressedCommand}
+                  holdToRun={holdToRun}
+                  onSetHoldToRun={setHoldToRun}
+                  onPress={handleMovementPress}
+                  onRelease={handleMovementRelease}
+                  onSpeedChange={handleSpeedChange}
+                  onServoChange={handleServoChange}
+                  onEmergencyStop={sendEmergencyStop}
+                  lastActionStatus={lastActionStatus}
+                />
+              </section>
 
-          {/* Right Column: Status & Natural Language AI (4 cols on desktop) */}
-          <section className="lg:col-span-4 flex flex-col space-y-6">
-            <RobotStatusCard
-              status={status}
-              config={config}
-              firestoreInfo={firestoreInfo}
-              pendingCommands={pendingCommands}
-              lastCommand={lastCommand}
-            />
+              {/* Right Column: Status & Natural Language AI (4 cols on desktop) */}
+              <section className="lg:col-span-4 flex flex-col space-y-6">
+                <RobotStatusCard
+                  status={status}
+                  config={config}
+                  firestoreInfo={firestoreInfo}
+                  pendingCommands={pendingCommands}
+                  lastCommand={lastCommand}
+                />
 
-            <AiControlCard
-              robotId={robotId}
-              onExecuteCommand={(cmd, opts) => {
-                sendCommand(cmd, {
-                  speedOverride: opts.speed,
-                  servoOverride: opts.servo,
-                  source: 'AI_NATURAL_LANGUAGE',
-                });
-              }}
-            />
-          </section>
-        </div>
+                <AiControlCard
+                  robotId={robotId}
+                  onExecuteCommand={(cmd, opts) => {
+                    sendCommand(cmd, {
+                      speedOverride: opts.speed,
+                      servoOverride: opts.servo,
+                      source: 'AI_NATURAL_LANGUAGE',
+                    });
+                  }}
+                />
+              </section>
+            </div>
 
-        {/* Bottom Section: Command Queue & Hardware History */}
-        <section>
-          <CommandHistoryTable
-            pendingCommands={pendingCommands}
-            commandHistory={commandHistory}
-            onRefresh={refreshData}
-          />
-        </section>
+            {/* Bottom Section: Command Queue & Hardware History */}
+            <section>
+              <CommandHistoryTable
+                pendingCommands={pendingCommands}
+                commandHistory={commandHistory}
+                onRefresh={refreshData}
+              />
+            </section>
 
-        {/* Bottom Section: Hardware Simulator & Cloud Run stdout */}
-        <section>
-          <HardwareSimulator
+            {/* Bottom Section: Hardware Simulator & Cloud Run stdout */}
+            <section>
+              <HardwareSimulator
+                config={config}
+                onUpdateConfig={updateModeConfig}
+                onSimulateCycle={simulateCycle}
+                onTriggerCapture={triggerCameraCapture}
+                logs={logs}
+              />
+            </section>
+          </>
+        ) : (
+          <RobotModesTab
+            status={status}
             config={config}
-            onUpdateConfig={updateModeConfig}
-            onSimulateCycle={simulateCycle}
+            onExecuteCommand={(cmd, opts) => {
+              sendCommand(cmd, {
+                speedOverride: opts?.speed,
+                servoOverride: opts?.servo,
+                source: opts?.source || 'AI_NATURAL_LANGUAGE',
+              });
+            }}
             onTriggerCapture={triggerCameraCapture}
-            logs={logs}
+            images={images}
           />
-        </section>
+        )}
       </main>
 
       {/* Footer */}
@@ -187,7 +255,7 @@ export default function App() {
             <span>·</span>
             <span>Cloud Robot Control Center</span>
             <span>·</span>
-            <span>Target: ACEBOTT QD001 ESP32-CAM</span>
+            <span>Multi-Mission Physical AI Robot</span>
           </div>
           <div className="flex items-center gap-3">
             <button

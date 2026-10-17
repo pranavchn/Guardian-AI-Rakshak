@@ -38,12 +38,12 @@ async function fetchJsonSafely<T = any>(url: string, init?: RequestInit): Promis
   }
 }
 
-export function useRobotControl(robotId: string = 'QD001') {
+export function useRobotControl(robotId: string = 'SR-01') {
   const [status, setStatus] = useState<RobotStatus | null>(null);
   const [firestoreInfo, setFirestoreInfo] = useState<FirestoreConnectionInfo>({
     connected: false,
-    projectId: 'qd00n-ai-robot',
-    databaseId: 'qd00n-ai-robot-db',
+    projectId: 'smart-rakshak-robot',
+    databaseId: '(default)',
     region: 'asia-south1',
     collections: ['robots', 'robotCommands', 'robotCommandHistory', 'robotHeartbeats', 'cameraImages', 'systemLogs'],
   });
@@ -68,6 +68,11 @@ export function useRobotControl(robotId: string = 'QD001') {
 
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const activePressedRef = useRef<RobotCommandType | null>(null);
+  const repeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSyncedLocalSpeedRef = useRef<number | null>(null);
+  const pressStartTimeRef = useRef<number>(0);
+  const scheduledStopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const localSeqRef = useRef<number>(0);
 
   // Fetch telemetry and queue data
   const fetchData = useCallback(async () => {
@@ -89,7 +94,10 @@ export function useRobotControl(robotId: string = 'QD001') {
         if (statusData.firestore) setFirestoreInfo(statusData.firestore);
       }
 
-      if (pendingData?.pending) {
+      // In LOCAL mode, commands are direct-dispatched; suppress pending queue display so stale demo commands do not show
+      if (statusData?.config?.controlMode === 'LOCAL' || config.controlMode === 'LOCAL') {
+        setPendingCommands([]);
+      } else if (pendingData?.pending) {
         setPendingCommands(pendingData.pending);
       }
 
@@ -120,7 +128,7 @@ export function useRobotControl(robotId: string = 'QD001') {
   }, [fetchData]);
 
 /**
- * Maps Smart Rakshak commands to the native ACEBOTT QD001 ESP32 WebServer (Port 81) query parameters.
+ * Maps Smart Rakshak commands to native ESP32 WebServer (Port 81) query parameters.
  * Baseline endpoint on Port 81: /control?var=car&val=<0..4>
  */
 function getLocalCommandQuery(
@@ -130,23 +138,85 @@ function getLocalCommandQuery(
 ): { path: string; query: string } | null {
   switch (command) {
     case 'FORWARD':
-      return { path: '/control', query: 'var=car&val=1' };
+      return { path: '/control', query: 'cmd=car&direction=Forward' };
+
     case 'BACKWARD':
-      return { path: '/control', query: 'var=car&val=2' };
+      return { path: '/control', query: 'cmd=car&direction=Backward' };
+
     case 'LEFT':
-      return { path: '/control', query: 'var=car&val=3' };
+      return { path: '/control', query: 'cmd=car&direction=Left' };
+
     case 'RIGHT':
-      return { path: '/control', query: 'var=car&val=4' };
+      return { path: '/control', query: 'cmd=car&direction=Right' };
+
+    case 'LEFT_UP':
+      return { path: '/control', query: 'cmd=car&direction=LeftUp' };
+
+    case 'RIGHT_UP':
+      return { path: '/control', query: 'cmd=car&direction=RightUp' };
+
+    case 'LEFT_DOWN':
+      return { path: '/control', query: 'cmd=car&direction=LeftDown' };
+
+    case 'RIGHT_DOWN':
+      return { path: '/control', query: 'cmd=car&direction=RightDown' };
+
+    case 'ROTATE_LEFT':
+      return { path: '/control', query: 'cmd=car&direction=Anticlockwise' };
+
+    case 'ROTATE_RIGHT':
+      return { path: '/control', query: 'cmd=car&direction=Clockwise' };
+
     case 'STOP':
     case 'EMERGENCY_STOP':
     case 'RESET_EMERGENCY_STOP':
-      return { path: '/control', query: 'var=car&val=0' };
+      return { path: '/control', query: 'cmd=car&direction=stop' };
+
     case 'SET_SPEED':
-      return { path: '/control', query: `var=speed&val=${encodeURIComponent(effectiveSpeed)}` };
+      return {
+        path: '/control',
+        query: `cmd=speed&value=${encodeURIComponent(effectiveSpeed)}`,
+      };
+
     case 'SET_SERVO':
-      return { path: '/control', query: `var=servo&val=${encodeURIComponent(effectiveServo)}` };
+      return {
+        path: '/control',
+        query: `cmd=servo&angle=${encodeURIComponent(effectiveServo)}`,
+      };
+
+    case 'BUZZER_1':
+      return { path: '/control', query: 'cmd=Buzzer&value=1' };
+
+    case 'BUZZER_2':
+      return { path: '/control', query: 'cmd=Buzzer&value=2' };
+
+    case 'BUZZER_3':
+      return { path: '/control', query: 'cmd=Buzzer&value=3' };
+
+    case 'BUZZER_4':
+      return { path: '/control', query: 'cmd=Buzzer&value=4' };
+
+    case 'CAMERA_LED_ON':
+      return { path: '/control', query: 'cmd=CAM_LED&value=1' };
+
+    case 'CAMERA_LED_OFF':
+      return { path: '/control', query: 'cmd=CAM_LED&value=0' };
+
+    case 'MODE_TRACKING':
+      return { path: '/control', query: 'cmd=Track&value=1' };
+
+    case 'MODE_AVOIDANCE':
+      return { path: '/control', query: 'cmd=Avoidance' };
+
+    case 'MODE_FOLLOW':
+      return { path: '/control', query: 'cmd=Follow' };
+
+    case 'MODE_STANDBY':
+      return { path: '/control', query: 'cmd=Track&value=0' };
+
     case 'CAPTURE_IMAGE':
       return { path: '/capture', query: '' };
+
     default:
       return null;
   }
@@ -166,12 +236,11 @@ function getLocalCommandQuery(
       const effectiveServo = options.servoOverride ?? servoAngle;
 
       // ==============================================================
-      // LOCAL MODE: Send directly to the robot's local WebServer
+      // LOCAL MODE: Send directly to the robot's local WebServer via same-origin relay
       // (DEMO and LIVE + CLOUD modes remain completely untouched below)
       // ==============================================================
       if (config.controlMode === 'LOCAL') {
         const targetIp = config.localIpAddress || status?.ipAddress || '192.168.31.137';
-        const targetPort = config.localPort || status?.localPort || 81;
         const mapping = getLocalCommandQuery(command, effectiveSpeed, effectiveServo);
 
         if (!mapping) {
@@ -179,53 +248,33 @@ function getLocalCommandQuery(
           return null;
         }
 
-        const targetUrl = `http://${targetIp}:${targetPort}${mapping.path}${mapping.query ? '?' + mapping.query : ''}`;
-        setLastActionStatus(`Local -> ${command} (${targetIp}:${targetPort})`);
-
-        const isHttpsContext = typeof window !== 'undefined' && window.location.protocol === 'https:';
-
-        // When hosted over HTTPS (e.g. Cloud Run / AI Studio preview), the browser strictly blocks
-        // insecure HTTP requests to local private IPs (Mixed Content & Private Network Access).
-        // Avoid attempting fetch() which triggers an immediate TypeError: Failed to fetch.
-        if (isHttpsContext) {
-          const failureMsg = `Browser Mixed Content restriction: This HTTPS dashboard cannot directly call local HTTP (${targetUrl}). Run dashboard locally on http://localhost:3000 to use LOCAL mode, or switch to CLOUD mode.`;
-          setLastActionStatus('Blocked: Mixed Content (Use http://localhost:3000)');
-          console.warn(`[LOCAL Mode Notice] ${failureMsg}`);
-
-          const localCmd: RobotCommand = {
-            commandId: `local-${Date.now()}`,
-            robotId,
-            command,
-            speed: effectiveSpeed,
-            servo: effectiveServo,
-            status: 'FAILED',
-            source: options.source || 'WEB_UI',
-            createdAt: new Date().toISOString(),
-            expiresAt: new Date(Date.now() + 10000).toISOString(),
-            ackDetails: {
-              executionStatus: 'FAILED',
-              executionTimestamp: new Date().toISOString(),
-              details: failureMsg,
-            },
-          };
-
-          setCommandHistory((prev) => [localCmd, ...prev.slice(0, 24)]);
-          return null;
-        }
+        const currentSeq = ++localSeqRef.current;
+        setLastActionStatus(`Local -> ${command} (${targetIp}:81)`);
 
         try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 2000);
-
-          const res = await fetch(targetUrl, {
-            method: 'GET',
-            signal: controller.signal,
+          const res = await fetch('/api/robot/local-dispatch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ip: targetIp,
+              command,
+              query: mapping.query,
+              speed: effectiveSpeed,
+              servo: effectiveServo,
+              robotId,
+            }),
           });
-          clearTimeout(timeoutId);
 
-          const successStatus = res.ok ? 'COMPLETED' : 'FAILED';
-          const statusText = res.ok ? `Local OK: ${command}` : `Local HTTP ${res.status}: ${command}`;
-          setLastActionStatus(statusText);
+          const data = await parseJsonSafely(res);
+          const isDelivered = res.ok && data?.ok && data?.status === 200;
+          const statusResult: CommandStatus = isDelivered ? 'COMPLETED' : 'FAILED';
+          const statusText = isDelivered
+            ? (command === 'STOP' ? 'Local: Motors Stopped' : `Local HTTP 200: ${command} delivered (Transport only)`)
+            : `Relay Failed: ${data?.message || `HTTP ${res.status}`}`;
+
+          if (currentSeq === localSeqRef.current) {
+            setLastActionStatus(statusText);
+          }
 
           const localCmd: RobotCommand = {
             commandId: `local-${Date.now()}`,
@@ -233,55 +282,29 @@ function getLocalCommandQuery(
             command,
             speed: effectiveSpeed,
             servo: effectiveServo,
-            status: successStatus,
+            status: statusResult,
             source: options.source || 'WEB_UI',
             createdAt: new Date().toISOString(),
             expiresAt: new Date(Date.now() + 10000).toISOString(),
-            executedAt: new Date().toISOString(),
+            executedAt: isDelivered ? new Date().toISOString() : undefined,
             ackDetails: {
-              executionStatus: successStatus,
+              executionStatus: statusResult,
               executionTimestamp: new Date().toISOString(),
-              details: `Dispatched directly to ${targetUrl} (HTTP ${res.status})`,
+              details: isDelivered
+                ? `HTTP 200 delivered to http://${targetIp}:81${mapping.path}?${mapping.query} via local relay (HTTP transport delivery confirmed; does not verify physical motor movement)`
+                : `Local relay error: ${data?.message || `HTTP ${res.status}`}`,
             },
           };
 
-          setCommandHistory((prev) => [localCmd, ...prev.slice(0, 24)]);
-          return localCmd;
+          setCommandHistory((prev) => [localCmd, ...prev.filter((c) => c.commandId !== localCmd.commandId).slice(0, 24)]);
+          return isDelivered ? localCmd : null;
         } catch (err: unknown) {
-          const isTimeout = err instanceof DOMException && err.name === 'AbortError';
-
-          if (isTimeout) {
-            const timeoutMsg = `Timeout reaching robot at ${targetIp}:${targetPort}`;
-            setLastActionStatus(timeoutMsg);
-            console.warn(`[LOCAL Mode Warning] Timeout reaching ${targetUrl}:`, err);
-
-            const localCmd: RobotCommand = {
-              commandId: `local-${Date.now()}`,
-              robotId,
-              command,
-              speed: effectiveSpeed,
-              servo: effectiveServo,
-              status: 'FAILED',
-              source: options.source || 'WEB_UI',
-              createdAt: new Date().toISOString(),
-              expiresAt: new Date(Date.now() + 10000).toISOString(),
-              ackDetails: {
-                executionStatus: 'FAILED',
-                executionTimestamp: new Date().toISOString(),
-                details: timeoutMsg,
-              },
-            };
-
-            setCommandHistory((prev) => [localCmd, ...prev.slice(0, 24)]);
-            return null;
+          const errorMsg = err instanceof Error ? err.message : 'Network error';
+          const failureText = `Local Relay Error: ${errorMsg}`;
+          if (currentSeq === localSeqRef.current) {
+            setLastActionStatus(failureText);
           }
-
-          // When fetch throws (e.g. CORS response-masking, connection refused, or unreachable IP),
-          // the browser suppresses the network response. We MUST NOT treat this failure as proof
-          // that the command was received or executed by the hardware.
-          const statusText = `Local Dispatched (Unconfirmed): ${command}`;
-          setLastActionStatus(statusText);
-          console.warn(`[LOCAL Mode Network Notice] Dispatch attempted to ${targetUrl} (delivery unconfirmed):`, err);
+          console.warn(`[LOCAL Mode Relay Warning] Failed to dispatch via local relay:`, err);
 
           const localCmd: RobotCommand = {
             commandId: `local-${Date.now()}`,
@@ -296,7 +319,7 @@ function getLocalCommandQuery(
             ackDetails: {
               executionStatus: 'FAILED',
               executionTimestamp: new Date().toISOString(),
-              details: `Dispatch attempted to ${targetUrl}; response not received or blocked by browser CORS policy (${err instanceof Error ? err.message : 'Failed to fetch'})`,
+              details: `Relay error: ${errorMsg}`,
             },
           };
 
@@ -341,30 +364,44 @@ function getLocalCommandQuery(
 
   // Immediate Emergency Stop
   const sendEmergencyStop = useCallback(async () => {
+    if (scheduledStopTimeoutRef.current) {
+      clearTimeout(scheduledStopTimeoutRef.current);
+      scheduledStopTimeoutRef.current = null;
+    }
+    if (repeatIntervalRef.current) {
+      clearInterval(repeatIntervalRef.current);
+      repeatIntervalRef.current = null;
+    }
     activePressedRef.current = null;
     setActivePressedCommand(null);
-    setLastActionStatus('EMERGENCY STOP TRIGGERED');
 
-    // In LOCAL mode, dispatch stop directly to the robot immediately (only in HTTP context)
+    // In LOCAL mode, dispatch stop directly to the robot immediately via local relay (zero cloud/demo queuing)
     if (config.controlMode === 'LOCAL') {
-      const isHttpsContext = typeof window !== 'undefined' && window.location.protocol === 'https:';
-      if (!isHttpsContext) {
-        const targetIp = config.localIpAddress || status?.ipAddress || '192.168.31.137';
-        const targetPort = config.localPort || status?.localPort || 81;
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 1500);
-          await fetch(`http://${targetIp}:${targetPort}/control?var=car&val=0`, {
-            method: 'GET',
-            signal: controller.signal,
-          });
-          clearTimeout(timeoutId);
-        } catch (err) {
-          console.warn('Local emergency stop direct send error:', err);
-        }
+      const targetIp = config.localIpAddress || status?.ipAddress || '192.168.31.137';
+      setLastActionStatus('EMERGENCY STOP TRIGGERED (LOCAL)');
+      try {
+        const res = await fetch('/api/robot/local-dispatch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ip: targetIp,
+            command: 'STOP',
+            query: 'var=car&val=0',
+            robotId,
+            source: 'EMERGENCY_WATCHDOG',
+          }),
+        });
+        const isOk = res.ok;
+        setLastActionStatus(isOk ? 'EMERGENCY STOP (LOCAL): Sent var=car&val=0 (HTTP 200)' : 'Emergency Stop Relay Failed');
+        return isOk;
+      } catch (err) {
+        console.warn('Local emergency stop relay send error:', err);
+        setLastActionStatus('Emergency Stop Failed (Local Relay)');
+        return false;
       }
     }
 
+    setLastActionStatus('EMERGENCY STOP TRIGGERED');
     try {
       const res = await fetch('/api/robot/emergency-stop', {
         method: 'POST',
@@ -376,26 +413,76 @@ function getLocalCommandQuery(
     } catch {
       return false;
     }
-  }, [robotId, fetchData, config.controlMode, config.localIpAddress, config.localPort, status?.ipAddress, status?.localPort]);
+  }, [robotId, fetchData, config.controlMode, config.localIpAddress, status?.ipAddress]);
 
-  // Movement control: Press handler (Hold-to-run or single step)
+  // Movement control: Press handler (Continuous hold-to-run refresh or single step)
   const handleMovementPress = useCallback(
     (command: RobotCommandType) => {
+      // Clear any pending scheduled stops or previous repeat intervals
+      if (scheduledStopTimeoutRef.current) {
+        clearTimeout(scheduledStopTimeoutRef.current);
+        scheduledStopTimeoutRef.current = null;
+      }
+      if (repeatIntervalRef.current) {
+        clearInterval(repeatIntervalRef.current);
+        repeatIntervalRef.current = null;
+      }
+
+      pressStartTimeRef.current = Date.now();
       activePressedRef.current = command;
       setActivePressedCommand(command);
+
+      // Always dispatch immediate movement command
       sendCommand(command);
+
+      // In Hold-to-Run mode, maintain continuous movement by refreshing every 200ms while held
+      // (prevents hardware watchdog cuts and matches continuous driving on hardware)
+      const isDirectional = [
+        'FORWARD', 'BACKWARD', 'LEFT', 'RIGHT',
+        'LEFT_UP', 'RIGHT_UP', 'LEFT_DOWN', 'RIGHT_DOWN',
+        'ROTATE_LEFT', 'ROTATE_RIGHT'
+      ].includes(command);
+      if (holdToRun && isDirectional) {
+        repeatIntervalRef.current = setInterval(() => {
+          if (activePressedRef.current === command) {
+            sendCommand(command);
+          } else {
+            if (repeatIntervalRef.current) {
+              clearInterval(repeatIntervalRef.current);
+              repeatIntervalRef.current = null;
+            }
+          }
+        }, 200);
+      }
     },
-    [sendCommand]
+    [holdToRun, sendCommand]
   );
 
-  // Movement control: Release handler (Only if holdToRun is active)
+  // Movement control: Release handler (Stops repeat loop and dispatches STOP safely)
   const handleMovementRelease = useCallback(
     (_command?: RobotCommandType) => {
+      if (repeatIntervalRef.current) {
+        clearInterval(repeatIntervalRef.current);
+        repeatIntervalRef.current = null;
+      }
+
       if (holdToRun && activePressedRef.current !== null) {
+        const elapsed = Date.now() - pressStartTimeRef.current;
         activePressedRef.current = null;
         setActivePressedCommand(null);
-        // SAFETY: Send STOP command immediately upon release
-        sendCommand('STOP');
+
+        // Ensure motors receive a minimum continuous pulse of at least 250ms on brief taps
+        // to overcome mechanical inertia and backlash before STOP is dispatched.
+        const minPulseMs = 250;
+        const delay = Math.max(0, minPulseMs - elapsed);
+        if (delay > 0) {
+          scheduledStopTimeoutRef.current = setTimeout(() => {
+            scheduledStopTimeoutRef.current = null;
+            sendCommand('STOP');
+          }, delay);
+        } else {
+          sendCommand('STOP');
+        }
       } else {
         activePressedRef.current = null;
         setActivePressedCommand(null);
@@ -403,6 +490,28 @@ function getLocalCommandQuery(
     },
     [holdToRun, sendCommand]
   );
+
+  // Auto-synchronize speed to robot whenever LOCAL mode is activated or speed changes
+  useEffect(() => {
+    if (config.controlMode === 'LOCAL' && lastSyncedLocalSpeedRef.current !== speed) {
+      lastSyncedLocalSpeedRef.current = speed;
+      sendCommand('SET_SPEED', { speedOverride: speed });
+    }
+  }, [config.controlMode, speed, sendCommand]);
+
+  // Clean up repeat interval and scheduled stop on unmount
+  useEffect(() => {
+    return () => {
+      if (repeatIntervalRef.current) {
+        clearInterval(repeatIntervalRef.current);
+        repeatIntervalRef.current = null;
+      }
+      if (scheduledStopTimeoutRef.current) {
+        clearTimeout(scheduledStopTimeoutRef.current);
+        scheduledStopTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   // Change speed
   const handleSpeedChange = useCallback(

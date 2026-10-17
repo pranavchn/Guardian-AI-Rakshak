@@ -46,7 +46,7 @@ export const ArchitectureDocs: React.FC<ArchitectureDocsProps> = ({ isOpen, onCl
               </h2>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Target Robot: ACEBOTT QD001 · Google Cloud Run · Firebase Firestore · Google Cloud Storage
+              Target Robot: Smart Rakshak Platform · Google Cloud Run · Firebase Firestore · Google Cloud Storage
             </p>
           </div>
           <button
@@ -132,7 +132,7 @@ export const ArchitectureDocs: React.FC<ArchitectureDocsProps> = ({ isOpen, onCl
                   <li className="flex items-start gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
                     <span>
-                      <strong className="text-slate-100">Additive Design:</strong> The cloud system wraps around the existing ACEBOTT QD001 firmware. Existing local control (<code className="text-sky-300 font-mono">/control</code> endpoint, local camera server, and Serial2 motor commands) remains completely functional without internet.
+                      <strong className="text-slate-100">Additive Design:</strong> The cloud system wraps around the existing hardware firmware. Existing local control (<code className="text-sky-300 font-mono">/control</code> endpoint, local camera server, and Serial2 motor commands) remains completely functional without internet.
                     </span>
                   </li>
                   <li className="flex items-start gap-2">
@@ -150,7 +150,7 @@ export const ArchitectureDocs: React.FC<ArchitectureDocsProps> = ({ isOpen, onCl
                   <li className="flex items-start gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
                     <span>
-                      <strong className="text-slate-100">Protected Services:</strong> The existing Cloud Run test service <code className="text-rose-400 font-mono">qd002-test</code> is untouched. Smart Rakshak runs in its own dedicated service.
+                      <strong className="text-slate-100">Protected Services:</strong> Smart Rakshak runs in its own dedicated, isolated microservice container.
                     </span>
                   </li>
                 </ul>
@@ -170,7 +170,7 @@ export const ArchitectureDocs: React.FC<ArchitectureDocsProps> = ({ isOpen, onCl
      └─► [ Existing Serial2 UART: 115200 baud ]
                │
                ▼
-[ QD001 Motor Controller Board ] (Differential Motors, Ultrasonic, Servos, Buzzer, LED)`}</pre>
+[ Smart Rakshak Motor Controller Board ] (Differential Motors, Ultrasonic, Servos, Buzzer, LED)`}</pre>
               </div>
             </div>
           )}
@@ -181,10 +181,10 @@ export const ArchitectureDocs: React.FC<ArchitectureDocsProps> = ({ isOpen, onCl
               <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1">
                 <div className="flex flex-wrap items-center justify-between text-xs font-mono gap-2">
                   <span>
-                    Project: <strong className="text-amber-400">qd00n-ai-robot</strong>
+                    Project: <strong className="text-amber-400">smart-rakshak-robot</strong>
                   </span>
                   <span>
-                    Database ID: <strong className="text-sky-400">qd00n-ai-robot-db</strong>
+                    Database ID: <strong className="text-sky-400">(default)</strong>
                   </span>
                   <span>
                     Region: <strong className="text-emerald-400">asia-south1</strong>
@@ -198,10 +198,10 @@ export const ArchitectureDocs: React.FC<ArchitectureDocsProps> = ({ isOpen, onCl
               <div className="space-y-3 font-mono text-xs">
                 {/* Collection 1: robots */}
                 <div className="bg-slate-950 p-3.5 rounded-lg border border-slate-800">
-                  <span className="text-sky-400 font-bold block mb-1">robots/&#123;robotId&#125; (e.g. robots/QD001)</span>
+                  <span className="text-sky-400 font-bold block mb-1">robots/&#123;robotId&#125; (e.g. robots/SR-01)</span>
                   <pre className="text-slate-400 text-[11px]">{`{
-  robotId: "QD001",
-  name: "Smart Rakshak — ACEBOTT QD001",
+  robotId: "SR-01",
+  name: "Smart Rakshak — Physical AI Robot",
   online: true,                       // Boolean computed via heartbeat watchdog
   lastSeen: "2026-10-10T07:45:00Z",
   firmwareVersion: "v2.4.1-cloud-rakshak",
@@ -226,7 +226,7 @@ export const ArchitectureDocs: React.FC<ArchitectureDocsProps> = ({ isOpen, onCl
                   <span className="text-amber-400 font-bold block mb-1">robotCommands/&#123;commandId&#125; (Active Queue)</span>
                   <pre className="text-slate-400 text-[11px]">{`{
   commandId: "cmd_1742080001_a9c2",
-  robotId: "QD001",
+  robotId: "SR-01",
   command: "FORWARD",                 // "FORWARD" | "BACKWARD" | "LEFT" | "RIGHT" | "STOP" | "EMERGENCY_STOP" | "SET_SPEED" | "SET_SERVO" | "CAPTURE_IMAGE"
   speed: 3,
   servo: 90,
@@ -242,7 +242,7 @@ export const ArchitectureDocs: React.FC<ArchitectureDocsProps> = ({ isOpen, onCl
                   <span className="text-emerald-400 font-bold block mb-1">robotCommandHistory/&#123;commandId&#125; (Archived Acknowledged)</span>
                   <pre className="text-slate-400 text-[11px]">{`{
   commandId: "cmd_1742080001_a9c2",
-  robotId: "QD001",
+  robotId: "SR-01",
   command: "FORWARD",
   status: "COMPLETED",
   createdAt: "2026-10-10T07:45:10Z",
@@ -260,8 +260,8 @@ export const ArchitectureDocs: React.FC<ArchitectureDocsProps> = ({ isOpen, onCl
                   <span className="text-sky-400 font-bold block mb-1">cameraImages/&#123;imageId&#125; (Captured Frames)</span>
                   <pre className="text-slate-400 text-[11px]">{`{
   imageId: "img_1742080045_3b9f",
-  robotId: "QD001",
-  storagePath: "gs://smart-rakshak-captures/QD001/capture_1742080045.jpg",
+  robotId: "SR-01",
+  storagePath: "gs://smart-rakshak-captures/SR-01/capture_1742080045.jpg",
   contentType: "image/jpeg",
   size: 34210,
   createdAt: "2026-10-10T07:45:45Z",
@@ -287,7 +287,7 @@ export const ArchitectureDocs: React.FC<ArchitectureDocsProps> = ({ isOpen, onCl
 
               <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-xs">
                 <pre>{`gs://smart-rakshak-captures/
-  └── QD001/
+  └── SR-01/
       ├── captures/
       │   ├── 2026-10-10_074501_front.jpg
       │   ├── 2026-10-10_074812_front.jpg
@@ -319,7 +319,7 @@ export const ArchitectureDocs: React.FC<ArchitectureDocsProps> = ({ isOpen, onCl
                 {/* 1. Poll Commands */}
                 <div className="bg-slate-950 p-3.5 rounded-lg border border-slate-800">
                   <div className="flex items-center justify-between text-sky-400 font-bold mb-1">
-                    <span>GET /api/device/commands?robotId=QD001</span>
+                    <span>GET /api/device/commands?robotId=SR-01</span>
                     <span className="text-[10px] text-slate-500 font-sans">Every 250-500ms</span>
                   </div>
                   <p className="text-slate-400 text-[11px] font-sans mb-1">
@@ -330,7 +330,7 @@ export const ArchitectureDocs: React.FC<ArchitectureDocsProps> = ({ isOpen, onCl
   "hasCommand": true,
   "command": {
     "commandId": "cmd_1742080001_a9c2",
-    "robotId": "QD001",
+    "robotId": "SR-01",
     "command": "FORWARD",
     "speed": 3,
     "servo": 90,
@@ -347,7 +347,7 @@ export const ArchitectureDocs: React.FC<ArchitectureDocsProps> = ({ isOpen, onCl
                   </div>
                   <pre className="text-slate-400 text-[11px]">{`Request Body:
 {
-  "robotId": "QD001",
+  "robotId": "SR-01",
   "commandId": "cmd_1742080001_a9c2",
   "command": "FORWARD",
   "executionStatus": "COMPLETED",     // "COMPLETED" | "FAILED"
@@ -364,7 +364,7 @@ export const ArchitectureDocs: React.FC<ArchitectureDocsProps> = ({ isOpen, onCl
                   </div>
                   <pre className="text-slate-400 text-[11px]">{`Request Body:
 {
-  "robotId": "QD001",
+  "robotId": "SR-01",
   "firmwareVersion": "v2.4.1-cloud-rakshak",
   "wifiStatus": "CONNECTED",
   "batteryLevel": 84,
@@ -421,9 +421,9 @@ export const ArchitectureDocs: React.FC<ArchitectureDocsProps> = ({ isOpen, onCl
 #include <ArduinoJson.h>
 
 // Re-use existing baseline motor/servo hooks (UNCHANGED)
-extern void sendMotorCommandToQD001(const char* cmd, int speed);
-extern void sendServoCommandToQD001(int angle);
-extern void sendSpeedCommandToQD001(int speed);
+extern void sendMotorCommandToHardware(const char* cmd, int speed);
+extern void sendServoCommandToHardware(int angle);
+extern void sendSpeedCommandToHardware(int speed);
 extern void executeEmergencyStop();
 
 // Heartbeat interval: 20s | Polling interval: 1.5s | Timeout: 3s
@@ -443,9 +443,7 @@ extern void executeEmergencyStop();
                   Google Cloud Run Deployment Instructions
                 </h4>
                 <p className="text-slate-400 text-xs">
-                  Target Project: <code className="text-amber-400 font-mono">QD00N AI Robot</code>
-                  <br />
-                  Note: The existing <code className="text-rose-400 font-mono">qd002-test</code> service will remain 100% untouched.
+                  Target Project: <code className="text-amber-400 font-mono">Smart Rakshak AI Robot</code>
                 </p>
               </div>
 
@@ -453,18 +451,18 @@ extern void executeEmergencyStop();
                 <div>
                   <span className="text-slate-400 block mb-1">1. Build Container Image:</span>
                   <pre className="text-sky-300 bg-slate-900 p-2 rounded">
-                    gcloud builds submit --tag gcr.io/qd00n-ai-robot/smart-rakshak-control
+                    gcloud builds submit --tag gcr.io/smart-rakshak-robot/smart-rakshak-control
                   </pre>
                 </div>
                 <div>
                   <span className="text-slate-400 block mb-1">2. Deploy to Dedicated Cloud Run Service:</span>
                   <pre className="text-sky-300 bg-slate-900 p-2 rounded whitespace-pre-wrap">
 {`gcloud run deploy smart-rakshak-backend \\
-  --image gcr.io/qd00n-ai-robot/smart-rakshak-control \\
+  --image gcr.io/smart-rakshak-robot/smart-rakshak-control \\
   --platform managed \\
   --region asia-southeast1 \\
   --allow-unauthenticated \\
-  --set-env-vars DEFAULT_ROBOT_ID="QD001",DEVICE_AUTH_TOKEN="YOUR_SECURE_DEVICE_TOKEN",HEARTBEAT_TIMEOUT_MS="15000",COMMAND_EXPIRATION_MS="10000"`}
+  --set-env-vars DEFAULT_ROBOT_ID="SR-01",DEVICE_AUTH_TOKEN="YOUR_SECURE_DEVICE_TOKEN",HEARTBEAT_TIMEOUT_MS="15000",COMMAND_EXPIRATION_MS="10000"`}
                   </pre>
                 </div>
               </div>

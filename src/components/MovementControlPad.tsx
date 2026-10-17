@@ -9,12 +9,24 @@ import {
   ArrowDown,
   ArrowLeft,
   ArrowRight,
+  ArrowUpLeft,
+  ArrowUpRight,
+  ArrowDownLeft,
+  ArrowDownRight,
+  RotateCcw,
+  RotateCw,
   Square,
   AlertOctagon,
   Gauge,
   Compass,
   Zap,
   ShieldAlert,
+  Volume2,
+  Lightbulb,
+  Navigation,
+  Eye,
+  Footprints,
+  Activity,
 } from 'lucide-react';
 import { RobotCommandType, RobotStatus } from '../types/robot.js';
 
@@ -80,6 +92,34 @@ export const MovementControlPad: React.FC<MovementControlPadProps> = ({
           e.preventDefault();
           onPress('RIGHT');
           break;
+        case 'q':
+        case 'Q':
+          e.preventDefault();
+          onPress('LEFT_UP');
+          break;
+        case 'e':
+        case 'E':
+          e.preventDefault();
+          onPress('RIGHT_UP');
+          break;
+        case 'z':
+        case 'Z':
+          e.preventDefault();
+          onPress('LEFT_DOWN');
+          break;
+        case 'c':
+        case 'C':
+          e.preventDefault();
+          onPress('RIGHT_DOWN');
+          break;
+        case '[':
+          e.preventDefault();
+          onPress('ROTATE_LEFT');
+          break;
+        case ']':
+          e.preventDefault();
+          onPress('ROTATE_RIGHT');
+          break;
         case ' ': // Spacebar
           e.preventDefault();
           onEmergencyStop();
@@ -116,6 +156,28 @@ export const MovementControlPad: React.FC<MovementControlPadProps> = ({
         case 'd':
         case 'D':
           onRelease('RIGHT');
+          break;
+        case 'q':
+        case 'Q':
+          onRelease('LEFT_UP');
+          break;
+        case 'e':
+        case 'E':
+          onRelease('RIGHT_UP');
+          break;
+        case 'z':
+        case 'Z':
+          onRelease('LEFT_DOWN');
+          break;
+        case 'c':
+        case 'C':
+          onRelease('RIGHT_DOWN');
+          break;
+        case '[':
+          onRelease('ROTATE_LEFT');
+          break;
+        case ']':
+          onRelease('ROTATE_RIGHT');
           break;
       }
     };
@@ -189,7 +251,7 @@ export const MovementControlPad: React.FC<MovementControlPadProps> = ({
         <div>
           <h2 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
             <Zap className="w-4 h-4 text-amber-400" />
-            QD001 Drive Teleoperation
+            Motor Drive Teleoperation
           </h2>
           <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
             <span>Hardware Motor Packet</span>
@@ -228,8 +290,20 @@ export const MovementControlPad: React.FC<MovementControlPadProps> = ({
       {/* Large Robot Movement Pad (Cross Layout) */}
       <div className="flex flex-col items-center justify-center my-auto py-2">
         <div className="grid grid-cols-3 gap-3 w-64 max-w-full">
-          {/* Row 1: Forward Button (Center) */}
-          <div />
+          {/* Row 1: Diagonal and Forward */}
+          <button
+            {...makePressHandlers('LEFT_UP')}
+            className={`touch-control-button h-20 rounded-xl flex flex-col items-center justify-center font-bold tracking-wider transition-all select-none shadow-md ${
+              activePressedCommand === 'LEFT_UP'
+                ? 'bg-amber-500 text-slate-950 scale-95 shadow-amber-500/40'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 hover:border-slate-600 active:scale-95'
+            }`}
+            aria-label="Diagonal Left Forward"
+          >
+            <ArrowUpLeft className="w-7 h-7 mb-1" />
+            <span className="text-[10px]">L-UP</span>
+          </button>
+
           <button
             {...makePressHandlers('FORWARD')}
             className={`touch-control-button h-20 rounded-xl flex flex-col items-center justify-center font-bold tracking-wider transition-all select-none shadow-md ${
@@ -240,9 +314,21 @@ export const MovementControlPad: React.FC<MovementControlPadProps> = ({
             aria-label="Drive Forward"
           >
             <ArrowUp className="w-7 h-7 mb-1" />
-            <span className="text-xs">FORWARD</span>
+            <span className="text-[10px]">FORWARD</span>
           </button>
-          <div />
+
+          <button
+            {...makePressHandlers('RIGHT_UP')}
+            className={`touch-control-button h-20 rounded-xl flex flex-col items-center justify-center font-bold tracking-wider transition-all select-none shadow-md ${
+              activePressedCommand === 'RIGHT_UP'
+                ? 'bg-amber-500 text-slate-950 scale-95 shadow-amber-500/40'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 hover:border-slate-600 active:scale-95'
+            }`}
+            aria-label="Diagonal Right Forward"
+          >
+            <ArrowUpRight className="w-7 h-7 mb-1" />
+            <span className="text-[10px]">R-UP</span>
+          </button>
 
           {/* Row 2: Left, Stop, Right Buttons */}
           <button
@@ -255,7 +341,7 @@ export const MovementControlPad: React.FC<MovementControlPadProps> = ({
             aria-label="Steer Left"
           >
             <ArrowLeft className="w-7 h-7 mb-1" />
-            <span className="text-xs">LEFT</span>
+            <span className="text-[10px]">LEFT</span>
           </button>
 
           {/* STOP Button (Center) */}
@@ -269,7 +355,7 @@ export const MovementControlPad: React.FC<MovementControlPadProps> = ({
             aria-label="Stop Motors"
           >
             <Square className="w-6 h-6 mb-1 fill-current" />
-            <span className="text-xs">STOP</span>
+            <span className="text-[10px]">STOP</span>
           </button>
 
           <button
@@ -282,11 +368,23 @@ export const MovementControlPad: React.FC<MovementControlPadProps> = ({
             aria-label="Steer Right"
           >
             <ArrowRight className="w-7 h-7 mb-1" />
-            <span className="text-xs">RIGHT</span>
+            <span className="text-[10px]">RIGHT</span>
           </button>
 
-          {/* Row 3: Backward Button (Center) */}
-          <div />
+          {/* Row 3: Diagonal and Backward */}
+          <button
+            {...makePressHandlers('LEFT_DOWN')}
+            className={`touch-control-button h-20 rounded-xl flex flex-col items-center justify-center font-bold tracking-wider transition-all select-none shadow-md ${
+              activePressedCommand === 'LEFT_DOWN'
+                ? 'bg-amber-500 text-slate-950 scale-95 shadow-amber-500/40'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 hover:border-slate-600 active:scale-95'
+            }`}
+            aria-label="Diagonal Left Backward"
+          >
+            <ArrowDownLeft className="w-7 h-7 mb-1" />
+            <span className="text-[10px]">L-DN</span>
+          </button>
+
           <button
             {...makePressHandlers('BACKWARD')}
             className={`touch-control-button h-20 rounded-xl flex flex-col items-center justify-center font-bold tracking-wider transition-all select-none shadow-md ${
@@ -297,16 +395,142 @@ export const MovementControlPad: React.FC<MovementControlPadProps> = ({
             aria-label="Drive Backward"
           >
             <ArrowDown className="w-7 h-7 mb-1" />
-            <span className="text-xs">BACKWARD</span>
+            <span className="text-[10px]">BACKWARD</span>
           </button>
-          <div />
+
+          <button
+            {...makePressHandlers('RIGHT_DOWN')}
+            className={`touch-control-button h-20 rounded-xl flex flex-col items-center justify-center font-bold tracking-wider transition-all select-none shadow-md ${
+              activePressedCommand === 'RIGHT_DOWN'
+                ? 'bg-amber-500 text-slate-950 scale-95 shadow-amber-500/40'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 hover:border-slate-600 active:scale-95'
+            }`}
+            aria-label="Diagonal Right Backward"
+          >
+            <ArrowDownRight className="w-7 h-7 mb-1" />
+            <span className="text-[10px]">R-DN</span>
+          </button>
+        </div>
+
+        {/* Rotation Controls */}
+        <div className="flex items-center gap-3 mt-4">
+          <button
+            {...makePressHandlers('ROTATE_LEFT')}
+            className={`touch-control-button h-16 w-30 rounded-xl flex flex-col items-center justify-center font-bold tracking-wider transition-all select-none shadow-md ${
+              activePressedCommand === 'ROTATE_LEFT'
+                ? 'bg-sky-500 text-slate-950 scale-95 shadow-sky-500/40'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 hover:border-slate-600 active:scale-95'
+            }`}
+          >
+            <RotateCcw className="w-6 h-6 mb-1" />
+            <span className="text-[10px]">ROTATE L</span>
+          </button>
+          <button
+            {...makePressHandlers('ROTATE_RIGHT')}
+            className={`touch-control-button h-16 w-30 rounded-xl flex flex-col items-center justify-center font-bold tracking-wider transition-all select-none shadow-md ${
+              activePressedCommand === 'ROTATE_RIGHT'
+                ? 'bg-sky-500 text-slate-950 scale-95 shadow-sky-500/40'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 hover:border-slate-600 active:scale-95'
+            }`}
+          >
+            <RotateCw className="w-6 h-6 mb-1" />
+            <span className="text-[10px]">ROTATE R</span>
+          </button>
         </div>
 
         {/* Keyboard hints */}
-        <div className="mt-3 text-[11px] text-slate-500 flex items-center gap-3">
-          <span>Keys: <kbd className="px-1 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300 font-mono">W</kbd> <kbd className="px-1 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300 font-mono">A</kbd> <kbd className="px-1 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300 font-mono">S</kbd> <kbd className="px-1 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300 font-mono">D</kbd></span>
-          <span>·</span>
-          <span>Space: <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-rose-300 font-mono">E-Stop</kbd></span>
+        <div className="mt-3 text-[11px] text-slate-500 flex flex-col items-center gap-1">
+          <div className="flex items-center gap-3">
+            <span>WASD / Arrows: Move</span>
+            <span>·</span>
+            <span>QEZC: Diagonal</span>
+            <span>·</span>
+            <span>[]: Rotate</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span>Space: <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-rose-300 font-mono text-[9px]">E-Stop</kbd></span>
+          </div>
+        </div>
+      </div>
+
+      {/* Auxiliary Controls (Buzzer, LED, Modes) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-3 border-t border-slate-800">
+        {/* Buzzer Control */}
+        <div className="bg-slate-950/60 p-3 rounded-lg border border-slate-800">
+          <div className="flex items-center gap-2 mb-3 text-xs font-semibold text-slate-300">
+            <Volume2 className="w-3.5 h-3.5 text-indigo-400" />
+            Buzzer Alerts
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {[1, 2, 3, 4].map(num => (
+              <button
+                key={num}
+                onClick={() => onPress(`BUZZER_${num}` as any)}
+                className="py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] rounded border border-slate-700 active:scale-95 transition-all"
+              >
+                Tone {num}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Camera LED Control */}
+        <div className="bg-slate-950/60 p-3 rounded-lg border border-slate-800 flex flex-col justify-between">
+          <div className="flex items-center gap-2 mb-3 text-xs font-semibold text-slate-300">
+            <Lightbulb className="w-3.5 h-3.5 text-yellow-400" />
+            Camera LED (Flash)
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => onPress('CAMERA_LED_ON')}
+              className="flex-1 py-2 bg-yellow-600 hover:bg-yellow-500 text-white text-[10px] font-bold rounded shadow-md active:scale-95 transition-all"
+            >
+              LED ON
+            </button>
+            <button
+              onClick={() => onPress('CAMERA_LED_OFF')}
+              className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-400 text-[10px] font-bold rounded border border-slate-700 active:scale-95 transition-all"
+            >
+              LED OFF
+            </button>
+          </div>
+        </div>
+
+        {/* Specialized Modes */}
+        <div className="bg-slate-950/60 p-3 rounded-lg border border-slate-800">
+          <div className="flex items-center gap-2 mb-3 text-xs font-semibold text-slate-300">
+            <Activity className="w-3.5 h-3.5 text-emerald-400" />
+            Hardware Modes
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => onPress('MODE_TRACKING')}
+              className="py-1.5 px-1 flex items-center gap-1.5 justify-center bg-slate-800 hover:bg-emerald-900/40 hover:text-emerald-300 text-slate-300 text-[9px] rounded border border-slate-700 transition-all"
+            >
+              <Navigation className="w-2.5 h-2.5" />
+              Tracking
+            </button>
+            <button
+              onClick={() => onPress('MODE_AVOIDANCE')}
+              className="py-1.5 px-1 flex items-center gap-1.5 justify-center bg-slate-800 hover:bg-emerald-900/40 hover:text-emerald-300 text-slate-300 text-[9px] rounded border border-slate-700 transition-all"
+            >
+              <Eye className="w-2.5 h-2.5" />
+              Avoidance
+            </button>
+            <button
+              onClick={() => onPress('MODE_FOLLOW')}
+              className="py-1.5 px-1 flex items-center gap-1.5 justify-center bg-slate-800 hover:bg-emerald-900/40 hover:text-emerald-300 text-slate-300 text-[9px] rounded border border-slate-700 transition-all"
+            >
+              <Footprints className="w-2.5 h-2.5" />
+              Follow
+            </button>
+            <button
+              onClick={() => onPress('MODE_STANDBY')}
+              className="py-1.5 px-1 flex items-center gap-1.5 justify-center bg-slate-900 hover:bg-slate-800 text-slate-500 text-[9px] rounded border border-slate-800 transition-all"
+            >
+              Standby
+            </button>
+          </div>
         </div>
       </div>
 
