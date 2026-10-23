@@ -42,11 +42,11 @@ export const ArchitectureDocs: React.FC<ArchitectureDocsProps> = ({ isOpen, onCl
             <div className="flex items-center gap-2">
               <Shield className="w-5 h-5 text-amber-400" />
               <h2 className="text-base font-bold text-slate-100">
-                Smart Rakshak — Architecture & Integration Specification
+                Guardian AI — Architecture & Integration Specification
               </h2>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Target Robot: Smart Rakshak Platform · Google Cloud Run · Firebase Firestore · Google Cloud Storage
+              Target Robot: Guardian AI Platform · Google Cloud Run · Firebase Firestore · Google Cloud Storage
             </p>
           </div>
           <button
@@ -201,7 +201,7 @@ export const ArchitectureDocs: React.FC<ArchitectureDocsProps> = ({ isOpen, onCl
                   <span className="text-sky-400 font-bold block mb-1">robots/&#123;robotId&#125; (e.g. robots/SR-01)</span>
                   <pre className="text-slate-400 text-[11px]">{`{
   robotId: "SR-01",
-  name: "Smart Rakshak — Physical AI Robot",
+  name: "Guardian AI — Physical AI Robot",
   online: true,                       // Boolean computed via heartbeat watchdog
   lastSeen: "2026-10-10T07:45:00Z",
   firmwareVersion: "v2.4.1-cloud-rakshak",
@@ -443,7 +443,7 @@ extern void executeEmergencyStop();
                   Google Cloud Run Deployment Instructions
                 </h4>
                 <p className="text-slate-400 text-xs">
-                  Target Project: <code className="text-amber-400 font-mono">Smart Rakshak AI Robot</code>
+                  Target Project: <code className="text-amber-400 font-mono">Guardian AI AI Robot</code>
                 </p>
               </div>
 

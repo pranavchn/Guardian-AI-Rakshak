@@ -47,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="text-base font-bold tracking-tight text-white whitespace-nowrap">
-                SMART RAKSHAK
+                GUARDIAN AI
               </span>
               <span className="text-xs text-slate-400 hidden sm:inline">
                 Physical AI Robot

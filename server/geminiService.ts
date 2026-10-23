@@ -114,7 +114,7 @@ export class GeminiRobotService {
     // 2. Try Gemini 3.8 Flash if API key is active
     if (this.ai) {
       try {
-        const prompt = `You are the safety-critical command translator for the Smart Rakshak physical AI robot.
+        const prompt = `You are the safety-critical command translator for the Guardian AI physical AI robot.
 Convert the following user input into a validated robot command.
 
 User input: "${naturalLanguage}"
@@ -400,7 +400,7 @@ Return JSON in this exact structure:
 
     if (this.ai) {
       try {
-        const prompt = `You are Smart Rakshak Helper, an intelligent, empathetic AI companion assisting an elderly person or someone with a disability.
+        const prompt = `You are Guardian AI Helper, an intelligent, empathetic AI companion assisting an elderly person or someone with a disability.
 The user just asked or stated: "${sanitized}"
 
 Instructions:
@@ -543,7 +543,7 @@ Return ONLY valid JSON matching this schema:
 
     return {
       success: true,
-      response: `I heard: "${input}". As your Smart Rakshak Helper, I am here to help you navigate, inspect your surroundings, adjust room lighting, or reach your caregiver. What would you like assistance with?`,
+      response: `I heard: "${input}". As your Guardian AI Helper, I am here to help you navigate, inspect your surroundings, adjust room lighting, or reach your caregiver. What would you like assistance with?`,
       category: 'GENERAL_HELP',
       recommendedAction: 'Select a common accessibility shortcut below or enter a specific request.',
       stepByStepGuidance: [
@@ -569,7 +569,7 @@ Return ONLY valid JSON matching this schema:
 
     if (this.ai) {
       try {
-        const prompt = `You are Smart Rakshak Helper Vision Assistant, providing visual accessibility and safety analysis for an elderly person or someone with visual/mobility impairments.
+        const prompt = `You are Guardian AI Helper Vision Assistant, providing visual accessibility and safety analysis for an elderly person or someone with visual/mobility impairments.
 User question about this image: "${userQuestion}"
 
 Analyze the image and provide:
@@ -647,7 +647,7 @@ Return ONLY valid JSON matching this structure:
 
     if (this.ai) {
       try {
-        const prompt = `You are Smart Rakshak Caregiver Alert Formulator.
+        const prompt = `You are Guardian AI Caregiver Alert Formulator.
 A senior or assisted individual needs assistance from their caregiver/family.
 Reason: "${reason}"
 Additional user notes: "${userNotes || 'None'}"
@@ -676,7 +676,7 @@ Return ONLY valid JSON matching this structure:
         return {
           success: true,
           urgency: parsed.urgency || 'ADVISORY',
-          message: parsed.message || `[Smart Rakshak Alert] Assistant request from ${roomLocation}: ${reason}. Please check in with user.`,
+          message: parsed.message || `[Guardian AI Alert] Assistant request from ${roomLocation}: ${reason}. Please check in with user.`,
           suggestedAction: parsed.suggestedAction || 'Please check in via phone or video call.',
           timestamp: now,
         };
@@ -689,7 +689,7 @@ Return ONLY valid JSON matching this structure:
     return {
       success: true,
       urgency: isUrgent ? 'URGENT' : 'ADVISORY',
-      message: `[Smart Rakshak Alert] Assistance request from ${roomLocation} at ${new Date().toLocaleTimeString()}: "${reason}". ${userNotes ? `Note: ${userNotes}` : ''}`,
+      message: `[Guardian AI Alert] Assistance request from ${roomLocation} at ${new Date().toLocaleTimeString()}: "${reason}". ${userNotes ? `Note: ${userNotes}` : ''}`,
       suggestedAction: isUrgent ? 'Call senior immediately or visit to check safety.' : 'Check in when convenient.',
       timestamp: now,
     };
@@ -708,7 +708,7 @@ Return ONLY valid JSON matching this structure:
 
     if (this.ai) {
       try {
-        const prompt = `You are Smart Rakshak Guardian, a friendly, gentle, educational AI robot companion and safety helper designed for children (ages 6 to 12).
+        const prompt = `You are Guardian AI Guardian, a friendly, gentle, educational AI robot companion and safety helper designed for children (ages 6 to 12).
 The child asks or says: "${sanitized}"
 
 Instructions:
@@ -742,7 +742,7 @@ Return ONLY valid JSON matching this schema:
 
         return {
           success: true,
-          response: parsed.response || 'Hello! I am your robot friend Smart Rakshak. How can I help you today?',
+          response: parsed.response || 'Hello! I am your robot friend Guardian AI. How can I help you today?',
           category: parsed.category || 'GENERAL_COMPANION',
           recommendedNextStep: parsed.recommendedNextStep || 'Let me know if you would like to hear a fun science fact or need help!',
           encourageAdultContact: Boolean(parsed.encourageAdultContact),
@@ -795,7 +795,7 @@ Return ONLY valid JSON matching this schema:
   public async guardianSafetyGuidance(situation: string, details?: string): Promise<GuardianSafetyGuidanceResponse> {
     if (this.ai) {
       try {
-        const prompt = `You are Smart Rakshak Guardian Child Safety Advisor.
+        const prompt = `You are Guardian AI Guardian Child Safety Advisor.
 A child is asking what to do in this situation: "${situation}".
 Additional details: "${details || 'None'}"
 
@@ -890,7 +890,7 @@ Return ONLY valid JSON matching this schema:
 
     if (this.ai) {
       try {
-        const prompt = `You are Smart Rakshak Guardian Vision Inspector, helping keep children safe at home.
+        const prompt = `You are Guardian AI Guardian Vision Inspector, helping keep children safe at home.
 User question or focus: "${userQuestion}"
 
 Analyze the provided room image from a child safety and obstacle perspective:
@@ -969,7 +969,7 @@ Return ONLY valid JSON matching this schema:
 
     if (this.ai) {
       try {
-        const prompt = `You are Smart Rakshak Guardian Assistance Formulator.
+        const prompt = `You are Guardian AI Guardian Assistance Formulator.
 A child has requested assistance from their parent or trusted adult.
 Child's statement: "${reason}"
 Notes or context: "${notes || 'None'}"
@@ -1005,7 +1005,7 @@ Return ONLY valid JSON:
           timestamp: now,
           category: parsed.category || 'Child Assistance',
           childRequest: reason,
-          preparedAlertMessage: parsed.preparedAlertMessage || `[Smart Rakshak Guardian] Child requested help in ${roomLocation}: "${reason}".`,
+          preparedAlertMessage: parsed.preparedAlertMessage || `[Guardian AI Guardian] Child requested help in ${roomLocation}: "${reason}".`,
           recommendedAction: parsed.recommendedAction || 'Please check in with your child.',
           status: 'MESSAGE_PREPARED',
           urgency: parsed.urgency || 'NORMAL',
@@ -1021,7 +1021,7 @@ Return ONLY valid JSON:
       timestamp: now,
       category: isUrgent ? 'Safety Alert' : 'Child Assistance',
       childRequest: reason,
-      preparedAlertMessage: `[Smart Rakshak Guardian Alert] Child request in ${roomLocation} at ${new Date().toLocaleTimeString()}: "${reason}". ${notes ? `Note: ${notes}` : ''}`,
+      preparedAlertMessage: `[Guardian AI Guardian Alert] Child request in ${roomLocation} at ${new Date().toLocaleTimeString()}: "${reason}". ${notes ? `Note: ${notes}` : ''}`,
       recommendedAction: isUrgent ? 'Call or check in on child immediately.' : 'Check in when convenient.',
       status: 'MESSAGE_PREPARED',
       urgency: isUrgent ? 'IMMEDIATE' : 'NORMAL',
@@ -1053,8 +1053,8 @@ Return ONLY valid JSON:
 
     if (this.ai) {
       try {
-        const prompt = `You are Smart Rakshak Protection Mode AI Visual Safety Inspector.
-Your mission is to perform visual safety analysis on this photograph captured by the Smart Rakshak physical robot camera to support home safety awareness.
+        const prompt = `You are Guardian AI Protection Mode AI Visual Safety Inspector.
+Your mission is to perform visual safety analysis on this photograph captured by the Guardian AI physical robot camera to support home safety awareness.
 
 User specific focus/question: "${focusInstruction}"
 
@@ -1215,7 +1215,7 @@ Return ONLY valid JSON matching this schema:
 
     if (this.ai) {
       try {
-        const prompt = `You are Smart Rakshak Protection Mode Safety Advisor.
+        const prompt = `You are Guardian AI Protection Mode Safety Advisor.
 The user is asking a follow-up question regarding the uploaded robot camera photograph.
 
 PREVIOUS ANALYSIS CONTEXT:

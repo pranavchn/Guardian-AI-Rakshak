@@ -1582,7 +1582,7 @@ async function generateDemoCapture(robotId: string): Promise<void> {
     <rect x="290" y="270" width="60" height="50" fill="#f59e0b" fill-opacity="0.15" stroke="#f59e0b" stroke-width="2" rx="4"/>
     <circle cx="320" cy="295" r="8" fill="#ef4444" fill-opacity="0.5"/>
     <circle cx="320" cy="295" r="40" fill="none" stroke="#38bdf8" stroke-width="1" stroke-dasharray="8,4"/>
-    <text x="24" y="36" fill="#38bdf8" font-family="monospace" font-size="13" font-weight="bold">SMART RAKSHAK OV2640 LIVE CAPTURE</text>
+    <text x="24" y="36" fill="#38bdf8" font-family="monospace" font-size="13" font-weight="bold">Guardian AI OV2640 LIVE CAPTURE</text>
     <text x="24" y="56" fill="#94a3b8" font-family="monospace" font-size="11">TARGET: ${label} · TIME: ${timestamp}</text>
     <text x="490" y="36" fill="#22c55e" font-family="monospace" font-size="12">STATUS: CAPTURED</text>
     <text x="490" y="56" fill="#94a3b8" font-family="monospace" font-size="11">STORAGE: GCS // OK</text>

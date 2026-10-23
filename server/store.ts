@@ -80,7 +80,7 @@ export class RobotDataStore {
     const now = new Date().toISOString();
     this.robot = {
       robotId: this.defaultRobotId,
-      name: 'Smart Rakshak — Physical AI Robot',
+      name: 'Guardian AI — Physical AI Robot',
       online: false,
       lastSeen: new Date(Date.now() - 30000).toISOString(),
       firmwareVersion: 'v2.4.1-cloud-rakshak',

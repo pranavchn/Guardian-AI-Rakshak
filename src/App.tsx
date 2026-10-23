@@ -251,7 +251,7 @@ export default function App() {
       <footer className="border-t border-slate-900 bg-slate-950/80 py-4 px-6 text-center text-xs text-slate-400">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-slate-300">Smart Rakshak</span>
+            <span className="font-semibold text-slate-300">Guardian AI</span>
             <span>·</span>
             <span>Cloud Robot Control Center</span>
             <span>·</span>

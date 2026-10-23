@@ -130,7 +130,7 @@ export const RobotModesTab: React.FC<RobotModesTabProps> = ({
   }>>([
     {
       role: 'assistant',
-      text: 'Hello. I am your Smart Rakshak Helper. I am here to help you move safely, inspect your surroundings, adjust room lighting, or notify your caregiver. What can I assist you with today?',
+      text: 'Hello. I am your Guardian AI Helper. I am here to help you move safely, inspect your surroundings, adjust room lighting, or notify your caregiver. What can I assist you with today?',
       category: 'GENERAL_HELP',
     },
   ]);
@@ -185,7 +185,7 @@ export const RobotModesTab: React.FC<RobotModesTabProps> = ({
   }>>([
     {
       role: 'companion',
-      text: 'Hi there! I am Smart Rakshak, your friendly robot companion. I love learning science facts, exploring new ideas, and helping you stay safe at home. What would you like to explore today?',
+      text: 'Hi there! I am Guardian AI, your friendly robot companion. I love learning science facts, exploring new ideas, and helping you stay safe at home. What would you like to explore today?',
       category: 'GENERAL_COMPANION',
     },
   ]);
@@ -873,7 +873,7 @@ export const RobotModesTab: React.FC<RobotModesTabProps> = ({
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-400 text-xs font-semibold tracking-wide uppercase">
               <Shield className="w-4 h-4" />
-              <span>Smart Rakshak — Operating Modes Hub</span>
+              <span>Guardian AI — Operating Modes Hub</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
               <span>{selectedMode === 'HELPER' ? 'Helper Mode' : selectedMode === 'GUARDIAN' ? 'Guardian Mode' : 'Protection Mode'}</span>
@@ -919,10 +919,10 @@ export const RobotModesTab: React.FC<RobotModesTabProps> = ({
                 onClick={() =>
                   speakText(
                     selectedMode === 'PROTECTION'
-                      ? 'Smart Rakshak Protection Mode is active. Upload a camera photo for Gemini-powered visual hazard analysis and home safety inspection.'
+                      ? 'Guardian AI Protection Mode is active. Upload a camera photo for Gemini-powered visual hazard analysis and home safety inspection.'
                       : selectedMode === 'GUARDIAN'
-                      ? 'Smart Rakshak Guardian Mode is active. I am here to help you learn, explore safely, and stay connected with parents.'
-                      : 'Smart Rakshak Helper Mode is active. Safe crawl speed level 1 is locked.'
+                      ? 'Guardian AI Guardian Mode is active. I am here to help you learn, explore safely, and stay connected with parents.'
+                      : 'Guardian AI Helper Mode is active. Safe crawl speed level 1 is locked.'
                   )
                 }
                 className="cursor-pointer px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-all"
@@ -1293,7 +1293,7 @@ export const RobotModesTab: React.FC<RobotModesTabProps> = ({
                       className={`flex flex-col ${item.role === 'child' ? 'items-end' : 'items-start'} space-y-1`}
                     >
                       <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-mono">
-                        <span>{item.role === 'child' ? 'You' : 'Smart Rakshak Companion'}</span>
+                        <span>{item.role === 'child' ? 'You' : 'Guardian AI Companion'}</span>
                         {item.category && (
                           <span className="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-sky-400">
                             {item.category}
@@ -1352,7 +1352,7 @@ export const RobotModesTab: React.FC<RobotModesTabProps> = ({
                   {guardianLoading && (
                     <div className="flex items-center gap-2 text-xs text-slate-400 italic py-2">
                       <Sparkles className="w-4 h-4 text-sky-400 animate-spin" />
-                      <span>Smart Rakshak is preparing a friendly answer with Gemini...</span>
+                      <span>Guardian AI is preparing a friendly answer with Gemini...</span>
                     </div>
                   )}
                 </div>
@@ -1511,7 +1511,7 @@ export const RobotModesTab: React.FC<RobotModesTabProps> = ({
 
                     {/* Disclaimer */}
                     <div className="text-[10px] text-slate-500 leading-relaxed pt-1">
-                      Notice: Smart Rakshak is an assistant companion and does not replace parents, guardians, or 911 emergency services.
+                      Notice: Guardian AI is an assistant companion and does not replace parents, guardians, or 911 emergency services.
                     </div>
                   </div>
                 )}
@@ -1982,7 +1982,7 @@ export const RobotModesTab: React.FC<RobotModesTabProps> = ({
                         </button>
 
                         <a
-                          href={`mailto:?subject=${encodeURIComponent(`[Smart Rakshak Guardian] Child Assistance Request`)}&body=${encodeURIComponent(guardianAssistanceDraft.preparedAlertMessage)}`}
+                          href={`mailto:?subject=${encodeURIComponent(`[Guardian AI - Guardian] Child Assistance Request`)}&body=${encodeURIComponent(guardianAssistanceDraft.preparedAlertMessage)}`}
                           className="cursor-pointer py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-all"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
@@ -2880,7 +2880,7 @@ export const RobotModesTab: React.FC<RobotModesTabProps> = ({
                         </button>
 
                         <a
-                          href={`mailto:?subject=${encodeURIComponent(`[Smart Rakshak Alert] ${caregiverReason}`)}&body=${encodeURIComponent(caregiverDraft.message)}`}
+                          href={`mailto:?subject=${encodeURIComponent(`[Guardian AI Alert] ${caregiverReason}`)}&body=${encodeURIComponent(caregiverDraft.message)}`}
                           className="cursor-pointer py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-all"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
