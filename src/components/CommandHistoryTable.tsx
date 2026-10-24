@@ -28,9 +28,17 @@ export const CommandHistoryTable: React.FC<CommandHistoryTableProps> = ({
 }) => {
   const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'COMPLETED' | 'FAILED_OR_EXPIRED'>('ALL');
 
-  const allItems = [...pendingCommands, ...commandHistory];
+  // Deduplicate by commandId across both pending and history collections
+  const seenIds = new Set<string>();
+  const uniqueItems: RobotCommand[] = [];
+  for (const item of [...pendingCommands, ...commandHistory]) {
+    if (item && item.commandId && !seenIds.has(item.commandId)) {
+      seenIds.add(item.commandId);
+      uniqueItems.push(item);
+    }
+  }
 
-  const filteredItems = allItems.filter((item) => {
+  const filteredItems = uniqueItems.filter((item) => {
     if (filter === 'ALL') return true;
     if (filter === 'PENDING') return item.status === 'PENDING' || item.status === 'EXECUTING';
     if (filter === 'COMPLETED') return item.status === 'COMPLETED';
@@ -148,8 +156,8 @@ export const CommandHistoryTable: React.FC<CommandHistoryTableProps> = ({
           </thead>
           <tbody className="divide-y divide-slate-800/60 font-mono">
             {filteredItems.length > 0 ? (
-              filteredItems.map((cmd) => (
-                <tr key={cmd.commandId} className="hover:bg-slate-800/40 transition-colors">
+              filteredItems.map((cmd, idx) => (
+                <tr key={`${cmd.commandId}-${idx}`} className="hover:bg-slate-800/40 transition-colors">
                   <td className="py-2.5 px-3 whitespace-nowrap">
                     <span className="flex items-center gap-1.5 text-[11px] font-semibold">
                       {getStatusIcon(cmd.status)}

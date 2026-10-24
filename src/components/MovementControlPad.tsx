@@ -16,11 +16,9 @@ import {
   RotateCcw,
   RotateCw,
   Square,
-  AlertOctagon,
   Gauge,
   Compass,
   Zap,
-  ShieldAlert,
   Volume2,
   Lightbulb,
   Navigation,
@@ -41,7 +39,6 @@ interface MovementControlPadProps {
   onRelease: (command: RobotCommandType) => void;
   onSpeedChange: (speed: number) => void;
   onServoChange: (angle: number) => void;
-  onEmergencyStop: () => void;
   lastActionStatus: string;
 }
 
@@ -56,7 +53,6 @@ export const MovementControlPad: React.FC<MovementControlPadProps> = ({
   onRelease,
   onSpeedChange,
   onServoChange,
-  onEmergencyStop,
   lastActionStatus,
 }) => {
   // Bind keyboard hotkeys (WASD / Arrows for driving, Space for Emergency Stop)
@@ -122,7 +118,7 @@ export const MovementControlPad: React.FC<MovementControlPadProps> = ({
           break;
         case ' ': // Spacebar
           e.preventDefault();
-          onEmergencyStop();
+          onPress('STOP');
           break;
         case 'Escape':
           e.preventDefault();
@@ -198,7 +194,7 @@ export const MovementControlPad: React.FC<MovementControlPadProps> = ({
       window.removeEventListener('blur', handleWindowBlur);
       document.removeEventListener('visibilitychange', handleWindowBlur);
     };
-  }, [holdToRun, onPress, onRelease, onEmergencyStop]);
+  }, [holdToRun, onPress, onRelease]);
 
   // Helper to attach pointer events for tactile press/release
   const makePressHandlers = (command: RobotCommandType) => ({
@@ -448,7 +444,7 @@ export const MovementControlPad: React.FC<MovementControlPadProps> = ({
             <span>[]: Rotate</span>
           </div>
           <div className="flex items-center gap-3">
-            <span>Space: <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-rose-300 font-mono text-[9px]">E-Stop</kbd></span>
+            <span>Space / Esc: <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-amber-300 font-mono text-[9px]">Stop Motors</kbd></span>
           </div>
         </div>
       </div>
@@ -606,29 +602,6 @@ export const MovementControlPad: React.FC<MovementControlPadProps> = ({
         </div>
       </div>
 
-      {/* Prominent High-Priority Emergency Stop Bar */}
-      <div className="pt-2 space-y-2">
-        <button
-          onClick={onEmergencyStop}
-          className="w-full py-3 px-4 bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white font-extrabold text-sm uppercase tracking-wider rounded-xl border border-rose-500 shadow-lg shadow-rose-950/60 flex items-center justify-center gap-2 cursor-pointer transition-all"
-        >
-          <AlertOctagon className="w-5 h-5 fill-rose-950 text-white animate-pulse" />
-          <span>PRIMARY EMERGENCY STOP</span>
-          <span className="text-xs font-normal normal-case text-rose-100 opacity-90 hidden sm:inline">
-            (Purges Queue & Halts All Hardware)
-          </span>
-        </button>
-
-        {status?.currentCommand === 'EMERGENCY_STOP' && (
-          <button
-            onClick={() => onPress('RESET_EMERGENCY_STOP')}
-            className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl border border-emerald-400 shadow-lg shadow-emerald-950/60 flex items-center justify-center gap-2 cursor-pointer transition-all animate-bounce"
-          >
-            <ShieldAlert className="w-4 h-4 text-emerald-100" />
-            <span>SAFE RECOVERY: RESET EMERGENCY STOP LOCKOUT</span>
-          </button>
-        )}
-      </div>
     </div>
   );
 };

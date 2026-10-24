@@ -1,38 +1,56 @@
 /**
- * Smart Rakshak — Hardware Simulator & Cloud Run Logs Drawer
- * Used in DEMO MODE to verify end-to-end device polling, heartbeats, and acks without hardware
+ * Guardian AI — FastAPI Diagnostics & System Audit Logs Drawer
+ * Displays real-time communication logs and live FastAPI Cloud Run health telemetry
  */
 
 import React, { useState } from 'react';
 import {
   Terminal,
-  Play,
-  RotateCw,
-  Radio,
-  Camera,
+  Activity,
   Server,
   Zap,
   ChevronDown,
   ChevronUp,
+  ExternalLink,
+  CheckCircle,
 } from 'lucide-react';
 import { SystemAuditLog, SystemModeConfig } from '../types/robot.js';
 
 interface HardwareSimulatorProps {
-  config: SystemModeConfig;
-  onUpdateConfig: (cfg: Partial<SystemModeConfig>) => void;
-  onSimulateCycle: () => void;
-  onTriggerCapture: () => void;
+  config?: SystemModeConfig;
+  onUpdateConfig?: (cfg: Partial<SystemModeConfig>) => void;
+  onSimulateCycle?: () => void;
+  onTriggerCapture?: () => void;
   logs: SystemAuditLog[];
 }
 
 export const HardwareSimulator: React.FC<HardwareSimulatorProps> = ({
-  config,
-  onUpdateConfig,
-  onSimulateCycle,
   onTriggerCapture,
   logs,
 }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [pingStatus, setPingStatus] = useState<string | null>(null);
+  const [isPinging, setIsPinging] = useState<boolean>(false);
+
+  const testFastApiPing = async () => {
+    setIsPinging(true);
+    setPingStatus('Testing connection to FastAPI Cloud Run...');
+    const start = Date.now();
+    try {
+      const res = await fetch('/api/fastapi/health');
+      const data = await res.json().catch(() => null);
+      const latency = Date.now() - start;
+      if (res.ok && data?.connected) {
+        setPingStatus(`FastAPI Online: 200 OK (${latency}ms round-trip)`);
+      } else {
+        setPingStatus(`FastAPI returned status: ${res.status}`);
+      }
+    } catch (err) {
+      setPingStatus(`Connection failed: ${err instanceof Error ? err.message : 'Error'}`);
+    } finally {
+      setIsPinging(false);
+    }
+  };
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
@@ -42,12 +60,13 @@ export const HardwareSimulator: React.FC<HardwareSimulatorProps> = ({
         className="px-4 py-3 bg-slate-950/70 border-b border-slate-800 flex items-center justify-between cursor-pointer hover:bg-slate-950 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <Terminal className="w-4 h-4 text-amber-400" />
+          <Terminal className="w-4 h-4 text-emerald-400" />
           <h3 className="text-sm font-semibold text-slate-200">
-            Hardware Simulator & Cloud Run Audit Logs
+            FastAPI Diagnostics & System Audit Logs
           </h3>
-          <span className="text-xs text-amber-400/80 font-mono">
-            {config.mode === 'DEMO' ? 'Active in Demo Mode' : 'Monitoring Live Link'}
+          <span className="text-xs text-emerald-400/90 font-mono flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            FastAPI Cloud Link Active
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -60,47 +79,54 @@ export const HardwareSimulator: React.FC<HardwareSimulatorProps> = ({
 
       {isOpen && (
         <div className="p-4 sm:p-5 space-y-4">
-          {/* Simulation Controls (Only relevant in DEMO MODE) */}
+          {/* FastAPI Link Summary */}
           <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
                 <Zap className="w-3.5 h-3.5 text-amber-400" />
-                ESP32 Hardware Simulation Engine
+                FastAPI Google Cloud Run Communication Service
               </span>
 
-              <div className="flex items-center gap-2 text-xs">
-                <label className="flex items-center gap-2 text-slate-300 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={config.autoSimulatePolling}
-                    onChange={(e) => onUpdateConfig({ autoSimulatePolling: e.target.checked })}
-                    className="accent-amber-500 rounded"
-                  />
-                  <span>Auto-simulate background ESP32 poller (250ms)</span>
-                </label>
-              </div>
+              <a
+                href="https://robotfastapicommunication-8789951438.asia-south1.run.app"
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1 transition-colors"
+              >
+                <span>robotfastapicommunication</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
             </div>
 
             <p className="text-xs text-slate-400">
-              When the physical robot is offline, you can trigger simulated device cycles to test command consumption, watchdog heartbeats, and camera frame generation.
+              Direct connection to the robot backend. All front-end movement, speed, servo, buzzer, LED, and safety commands are dispatched instantly to FastAPI, where robot QD001 continuously polls and executes them via the Serial2 motor bus.
             </p>
 
-            <div className="flex flex-wrap gap-2 pt-1">
+            <div className="flex flex-wrap items-center gap-3 pt-1">
               <button
-                onClick={onSimulateCycle}
-                className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                onClick={testFastApiPing}
+                disabled={isPinging}
+                className="px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
               >
-                <Play className="w-3.5 h-3.5" />
-                <span>Simulate 1 Polling & Ack Cycle</span>
+                <Activity className="w-3.5 h-3.5" />
+                <span>{isPinging ? 'Pinging...' : 'Ping FastAPI Health'}</span>
               </button>
 
-              <button
-                onClick={onTriggerCapture}
-                className="px-3 py-1.5 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <Camera className="w-3.5 h-3.5" />
-                <span>Queue Camera Capture</span>
-              </button>
+              {onTriggerCapture && (
+                <button
+                  onClick={onTriggerCapture}
+                  className="px-3 py-1.5 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <span>Request Camera Frame</span>
+                </button>
+              )}
+
+              {pingStatus && (
+                <span className="text-xs font-mono text-emerald-400 flex items-center gap-1">
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  {pingStatus}
+                </span>
+              )}
             </div>
           </div>
 
@@ -109,7 +135,7 @@ export const HardwareSimulator: React.FC<HardwareSimulatorProps> = ({
             <div className="flex items-center justify-between text-xs text-slate-400">
               <span className="font-semibold text-slate-300 flex items-center gap-1.5">
                 <Server className="w-3.5 h-3.5 text-slate-400" />
-                Cloud Run Backend System Logs
+                Cloud Backend System Audit Stream
               </span>
               <span className="font-mono text-[11px]">Real-time stdout</span>
             </div>

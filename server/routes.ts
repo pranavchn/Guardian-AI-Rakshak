@@ -181,6 +181,163 @@ function getCommandQuery(
   }
 }
 
+// ==========================================
+// FASTAPI UNIFIED BACKEND INTEGRATION
+// https://robotfastapicommunication-8789951438.asia-south1.run.app
+// ==========================================
+const FASTAPI_BASE_URL = 'https://robotfastapicommunication-8789951438.asia-south1.run.app';
+
+function mapToFastApiCommand(command: string): string {
+  const c = command.toUpperCase().trim();
+  switch (c) {
+    case 'FORWARD':
+      return 'FORWARD';
+    case 'BACKWARD':
+      return 'BACKWARD';
+    case 'LEFT':
+      return 'LEFT';
+    case 'RIGHT':
+      return 'RIGHT';
+    case 'LEFT_UP':
+    case 'LEFTUP':
+      return 'LEFTUP';
+    case 'RIGHT_UP':
+    case 'RIGHTUP':
+      return 'RIGHTUP';
+    case 'LEFT_DOWN':
+    case 'LEFTDOWN':
+      return 'LEFTDOWN';
+    case 'RIGHT_DOWN':
+    case 'RIGHTDOWN':
+      return 'RIGHTDOWN';
+    case 'ROTATE_LEFT':
+    case 'ANTICLOCKWISE':
+      return 'ANTICLOCKWISE';
+    case 'ROTATE_RIGHT':
+    case 'CLOCKWISE':
+      return 'CLOCKWISE';
+    case 'STOP':
+    case 'RESET_EMERGENCY_STOP':
+      return 'STOP';
+    case 'EMERGENCY_STOP':
+      return 'EMERGENCY_STOP';
+    case 'SET_SPEED':
+      return 'SET_SPEED';
+    case 'SET_SERVO':
+      return 'SET_SERVO';
+    default:
+      return c;
+  }
+}
+
+async function dispatchToFastApi(command: string): Promise<{ ok: boolean; status: number; data?: any; error?: string }> {
+  const targetCmd = mapToFastApiCommand(command);
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch(`${FASTAPI_BASE_URL}/robot/command`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: targetCmd }),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    const data = await res.json().catch(() => null);
+    return { ok: res.ok, status: res.status, data };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Connection failed';
+    return { ok: false, status: 500, error: msg };
+  }
+}
+
+// POST /api/fastapi/command - Primary endpoint for unified FastAPI control
+apiRouter.post('/fastapi/command', async (req: Request, res: Response) => {
+  const { command, speed, servo, robotId, source } = req.body;
+  if (!command) {
+    res.status(400).json({ error: 'Command is required' });
+    return;
+  }
+
+  const mappedCmd = mapToFastApiCommand(String(command));
+  const result = await dispatchToFastApi(mappedCmd);
+
+  const uniqueId = `fastapi-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const robotCommand: RobotCommand = {
+    commandId: uniqueId,
+    robotId: robotId || dataStore.getDefaultRobotId(),
+    command: (command as RobotCommandType) || mappedCmd,
+    speed: typeof speed === 'number' ? speed : 3,
+    servo: typeof servo === 'number' ? servo : 90,
+    status: result.ok ? 'COMPLETED' : 'FAILED',
+    source: source || 'WEB_UI',
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 10000).toISOString(),
+    executedAt: result.ok ? new Date().toISOString() : undefined,
+    ackDetails: {
+      executionStatus: result.ok ? 'COMPLETED' : 'FAILED',
+      executionTimestamp: new Date().toISOString(),
+      details: result.ok
+        ? `FastAPI accepted command: ${mappedCmd}`
+        : `FastAPI error (${result.status}): ${result.error || result.data?.detail || 'Request rejected'}`,
+    },
+  };
+
+  dataStore.recordFastApiCommand(robotCommand);
+
+  res.status(result.ok ? 200 : result.status).json({
+    success: result.ok,
+    command: robotCommand,
+    mappedCommand: mappedCmd,
+    fastApiResponse: result.data,
+    error: result.error,
+  });
+});
+
+// GET /api/fastapi/health - Health check and latency measurement
+apiRouter.get('/fastapi/health', async (_req: Request, res: Response) => {
+  const start = Date.now();
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3500);
+    const response = await fetch(`${FASTAPI_BASE_URL}/health`, { signal: controller.signal });
+    clearTimeout(timer);
+    const latencyMs = Date.now() - start;
+    const data = await response.json().catch(() => null);
+
+    res.json({
+      connected: response.ok,
+      status: response.ok ? 'ONLINE' : 'UNAVAILABLE',
+      latencyMs,
+      url: FASTAPI_BASE_URL,
+      details: data,
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Unreachable';
+    res.json({
+      connected: false,
+      status: 'OFFLINE',
+      latencyMs: Date.now() - start,
+      url: FASTAPI_BASE_URL,
+      error: msg,
+    });
+  }
+});
+
+// GET /api/fastapi/command - Check current pending command on FastAPI
+apiRouter.get('/fastapi/command', async (_req: Request, res: Response) => {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3500);
+    const response = await fetch(`${FASTAPI_BASE_URL}/robot/command`, { signal: controller.signal });
+    clearTimeout(timer);
+    const data = await response.json().catch(() => null);
+    res.json(data || { command: 'NONE' });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Error reaching FastAPI';
+    res.status(502).json({ error: msg });
+  }
+});
+
 // POST /api/robot/commands
 apiRouter.post('/robot/commands', async (req: Request, res: Response) => {
   const { command, robotId, speed, servo, source } = req.body;
@@ -407,6 +564,9 @@ apiRouter.post('/robot/emergency-stop', async (req: Request, res: Response) => {
   }
 
   try {
+    // Dispatch to FastAPI immediately
+    dispatchToFastApi('EMERGENCY_STOP').catch((e) => console.warn('FastAPI e-stop notice:', e));
+
     const stopCmd = await dataStore.enqueueCommand('EMERGENCY_STOP', {
       robotId,
       source: req.body.source || 'EMERGENCY_WATCHDOG',
@@ -415,7 +575,7 @@ apiRouter.post('/robot/emergency-stop', async (req: Request, res: Response) => {
     res.status(200).json({
       emergencyStopActive: true,
       command: stopCmd,
-      message: 'EMERGENCY STOP ENGAGED: All movement commands purged immediately.',
+      message: 'EMERGENCY STOP ENGAGED: All movement commands purged immediately and sent to FastAPI.',
     });
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : 'Emergency stop dispatch failed';

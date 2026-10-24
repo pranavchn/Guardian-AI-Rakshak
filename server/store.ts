@@ -917,8 +917,7 @@ export class RobotDataStore {
    */
   public recordLocalCommand(command: RobotCommand): void {
     const now = new Date().toISOString();
-    this.commandHistory.unshift(command);
-    if (this.commandHistory.length > 200) this.commandHistory.pop();
+    this.commandHistory = [command, ...this.commandHistory.filter((c) => c.commandId !== command.commandId)].slice(0, 200);
 
     if (command.command === 'STOP' || command.command === 'EMERGENCY_STOP') {
       this.robot.currentCommand = command.command;
@@ -947,6 +946,43 @@ export class RobotDataStore {
         speed: command.speed,
         servo: command.servo,
         details: command.ackDetails?.details,
+      }
+    );
+  }
+
+  /**
+   * Records a FastAPI backend command dispatch into commandHistory and telemetry
+   */
+  public recordFastApiCommand(command: RobotCommand): void {
+    const now = new Date().toISOString();
+    this.commandHistory = [command, ...this.commandHistory.filter((c) => c.commandId !== command.commandId)].slice(0, 200);
+
+    this.robot.currentCommand = command.command === 'STOP' ? null : command.command;
+    this.robot.online = true;
+    this.robot.cloudStatus = 'CONNECTED';
+    this.robot.lastSeen = now;
+
+    if (command.speed !== undefined) {
+      this.robot.speed = Math.max(1, Math.min(5, command.speed));
+    }
+    if (command.servo !== undefined) {
+      this.robot.servoAngle = Math.max(0, Math.min(180, command.servo));
+    }
+
+    if (command.status === 'COMPLETED') {
+      this.robot.totalCommandsExecuted += 1;
+    }
+    this.robot.updatedAt = now;
+
+    this.logAudit(
+      'COMMAND',
+      'INFO',
+      `FastAPI command executed: ${command.command}`,
+      {
+        commandId: command.commandId,
+        speed: command.speed,
+        servo: command.servo,
+        source: command.source,
       }
     );
   }

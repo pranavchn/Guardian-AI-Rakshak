@@ -37,16 +37,13 @@ export default function App() {
     servoAngle,
     lastActionStatus,
     sendCommand,
-    sendEmergencyStop,
     handleMovementPress,
     handleMovementRelease,
     handleSpeedChange,
     handleServoChange,
     triggerCameraCapture,
-    updateModeConfig,
-    simulateCycle,
     refreshData,
-  } = useRobotControl('SR-01');
+  } = useRobotControl('QD001');
 
   const [selectedImage, setSelectedImage] = useState<CameraImageRecord | null>(null);
   const [isArchitectureDocsOpen, setIsArchitectureDocsOpen] = useState<boolean>(false);
@@ -77,18 +74,6 @@ export default function App() {
     }
   };
 
-  // Toggle DEMO vs LIVE mode
-  const handleToggleDemoMode = () => {
-    const nextMode = config.mode === 'DEMO' ? 'LIVE' : 'DEMO';
-    updateModeConfig({ mode: nextMode });
-  };
-
-  // Toggle CLOUD vs LOCAL mode
-  const handleToggleControlMode = () => {
-    const nextControl = config.controlMode === 'CLOUD' ? 'LOCAL' : 'CLOUD';
-    updateModeConfig({ controlMode: nextControl });
-  };
-
   const lastCommand = commandHistory[0] || pendingCommands[0] || null;
 
   return (
@@ -97,9 +82,6 @@ export default function App() {
       <Header
         status={status}
         config={config}
-        onEmergencyStop={sendEmergencyStop}
-        onToggleDemoMode={handleToggleDemoMode}
-        onToggleControlMode={handleToggleControlMode}
         onOpenDocs={() => setIsArchitectureDocsOpen(true)}
       />
 
@@ -182,7 +164,6 @@ export default function App() {
                   onRelease={handleMovementRelease}
                   onSpeedChange={handleSpeedChange}
                   onServoChange={handleServoChange}
-                  onEmergencyStop={sendEmergencyStop}
                   lastActionStatus={lastActionStatus}
                 />
               </section>
@@ -222,9 +203,6 @@ export default function App() {
             {/* Bottom Section: Hardware Simulator & Cloud Run stdout */}
             <section>
               <HardwareSimulator
-                config={config}
-                onUpdateConfig={updateModeConfig}
-                onSimulateCycle={simulateCycle}
                 onTriggerCapture={triggerCameraCapture}
                 logs={logs}
               />

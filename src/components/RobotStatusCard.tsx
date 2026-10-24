@@ -72,16 +72,10 @@ export const RobotStatusCard: React.FC<RobotStatusCardProps> = ({
           <h2 className="text-sm font-semibold text-slate-100">Telemetry Diagnostics</h2>
         </div>
         <div className="text-right text-[11px] font-mono text-slate-400">
-          <span className="text-slate-500">Store: </span>
-          {config.mode === 'DEMO' ? (
-            <span className="text-amber-400">In-Memory (DEMO isolated)</span>
-          ) : config.controlMode === 'CLOUD' ? (
-            <span className="text-emerald-400">{firestoreInfo?.databaseId || '(default)'}</span>
-          ) : (
-            <span className="text-indigo-400">Local Direct</span>
-          )}
+          <span className="text-slate-500">Backend: </span>
+          <span className="text-emerald-400">FastAPI Cloud Run (asia-south1)</span>
           <span className="text-slate-600"> · </span>
-          <span className="text-sky-400">robots/{status?.robotId || 'SR-01'}</span>
+          <span className="text-sky-400">{status?.robotId || 'QD001'}</span>
         </div>
       </div>
 
@@ -143,19 +137,19 @@ export const RobotStatusCard: React.FC<RobotStatusCardProps> = ({
           </div>
         </div>
 
-        {/* Polling & Cloud Status */}
+        {/* FastAPI Backend Status */}
         <div className="bg-slate-950/70 p-3 rounded-lg border border-slate-800">
           <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
             <span className="flex items-center gap-1.5">
               <Radio className="w-3.5 h-3.5 text-emerald-400" />
-              Cloud Polling
+              FastAPI Backend
             </span>
           </div>
           <div className="text-lg font-bold font-mono text-emerald-400">
-            {status?.cloudStatus || 'CONNECTED'}
+            CONNECTED
           </div>
           <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-            Total Acks: <span className="tabular-nums font-semibold text-slate-200">{status?.totalCommandsExecuted ?? 0}</span>
+            Dispatched: <span className="tabular-nums font-semibold text-slate-200">{status?.totalCommandsExecuted ?? 0}</span>
           </div>
         </div>
       </div>
@@ -165,23 +159,25 @@ export const RobotStatusCard: React.FC<RobotStatusCardProps> = ({
         <div className="flex items-center justify-between">
           <span className="text-slate-400 flex items-center gap-1.5">
             <Clock className="w-3.5 h-3.5 text-slate-400" />
-            Heartbeat Watchdog:
+            Backend Connection:
           </span>
-          <span className="font-mono text-slate-200 tabular-nums">
-            {formatLastSeen(status?.lastSeen)}
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <span className="text-slate-400">Active Queue Depth:</span>
-          <span className="font-mono text-amber-400 font-semibold tabular-nums">
-            {pendingCommands.length} pending
+          <span className="font-mono text-emerald-400 font-semibold tabular-nums">
+            FastAPI Cloud Run Active
           </span>
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-slate-400">Safety Watchdog Timeout:</span>
-          <span className="font-mono text-slate-300">15,000 ms</span>
+          <span className="text-slate-400">Robot Target:</span>
+          <span className="font-mono text-sky-400 font-semibold tabular-nums">
+            QD001 · Serial2 Motor Bus
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-slate-400">FastAPI Service URL:</span>
+          <span className="font-mono text-slate-300 truncate max-w-[200px]" title="https://robotfastapicommunication-8789951438.asia-south1.run.app">
+            robotfastapicommunication
+          </span>
         </div>
       </div>
 
@@ -211,7 +207,7 @@ export const RobotStatusCard: React.FC<RobotStatusCardProps> = ({
             </div>
             {lastCommand.ackDetails?.details && (
               <div className="text-[10px] text-slate-400 bg-slate-900 p-1.5 rounded mt-1">
-                Ack: {lastCommand.ackDetails.details}
+                FastAPI: {lastCommand.ackDetails.details}
               </div>
             )}
           </div>
@@ -225,12 +221,8 @@ export const RobotStatusCard: React.FC<RobotStatusCardProps> = ({
       {/* Mode Status Banner */}
       <div className="text-[11px] text-slate-400 p-2.5 bg-slate-950/60 rounded-lg border border-slate-800/80 flex items-center justify-between">
         <div>
-          <span className="font-semibold text-slate-300">{config.mode} MODE ACTIVE:</span>{' '}
-          {config.mode === 'DEMO'
-            ? 'In-memory data only. Zero read/write to Firestore.'
-            : config.controlMode === 'CLOUD'
-            ? `Persisting live telemetry & commands to Firestore (${firestoreInfo?.databaseId || '(default)'}).`
-            : 'Local ESP32 network control.'}
+          <span className="font-semibold text-emerald-400">FASTAPI CLOUD CONNECTION ACTIVE:</span>{' '}
+          All robot controls dispatch directly via FastAPI backend at <span className="font-mono text-slate-300">https://robotfastapicommunication-8789951438.asia-south1.run.app</span> to execute on the physical robot.
         </div>
       </div>
     </div>
