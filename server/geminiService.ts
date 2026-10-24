@@ -32,7 +32,7 @@ export interface ValidatedAiCommandResult {
   intentSummary: string;
   safetyPassed: boolean;
   safetyReason?: string;
-  sourceEngine: 'GEMINI_3_8_FLASH' | 'DETERMINISTIC_SAFETY_PARSER';
+  sourceEngine: 'LOCAL_ZERO_COST_ENGINE' | 'GEMINI_3_1_FLASH_LITE' | 'GEMINI_3_8_FLASH' | 'DETERMINISTIC_SAFETY_PARSER';
 }
 
 export interface AiVisionResult {
@@ -48,11 +48,17 @@ const ALLOWED_COMMANDS: RobotCommandType[] = [
   'BACKWARD',
   'LEFT',
   'RIGHT',
+  'LEFT_UP',
+  'RIGHT_UP',
+  'LEFT_DOWN',
+  'RIGHT_DOWN',
+  'ROTATE_LEFT',
+  'ROTATE_RIGHT',
   'STOP',
-  'EMERGENCY_STOP',
   'SET_SPEED',
   'SET_SERVO',
   'CAPTURE_IMAGE',
+  'BUZZER_1',
 ];
 
 export class GeminiRobotService {
@@ -73,71 +79,50 @@ export class GeminiRobotService {
 
   /**
    * Translates natural language into a strictly validated robot command.
-   * Ensures AI outputs pass all boundary checks before reaching the hardware queue.
+   * Prioritizes the 100% Free Local Zero-Cost Engine for instant (<1ms) response.
    */
   public async translateCommand(naturalLanguage: string): Promise<ValidatedAiCommandResult> {
     const sanitizedInput = naturalLanguage.trim().toLowerCase();
 
-    // 1. FAST HIGH-PRIORITY SAFETY OVERRIDE
-    // Words like "emergency", "crash", "danger", "halt" must instantly yield EMERGENCY_STOP or STOP
-    if (
-      sanitizedInput.includes('emergency') ||
-      sanitizedInput.includes('estop') ||
-      sanitizedInput.includes('kill switch') ||
-      sanitizedInput.includes('danger')
-    ) {
-      return {
-        valid: true,
-        commandType: 'EMERGENCY_STOP',
-        intentSummary: 'Immediate Emergency Stop triggered via safety override',
-        safetyPassed: true,
-        sourceEngine: 'DETERMINISTIC_SAFETY_PARSER',
-      };
+    // 1. PRIMARY: FAST FREE LOCAL ZERO-COST ENGINE (<1ms, $0.00 cost)
+    const localResult = this.parseDeterministic(sanitizedInput);
+    if (localResult.valid) {
+      return localResult;
     }
 
-    if (
-      sanitizedInput === 'stop' ||
-      sanitizedInput === 'halt' ||
-      sanitizedInput.includes('stop moving') ||
-      sanitizedInput.includes('pause') ||
-      sanitizedInput.includes('freeze')
-    ) {
-      return {
-        valid: true,
-        commandType: 'STOP',
-        intentSummary: 'Stop robot motors immediately',
-        safetyPassed: true,
-        sourceEngine: 'DETERMINISTIC_SAFETY_PARSER',
-      };
-    }
-
-    // 2. Try Gemini 3.8 Flash if API key is active
+    // 2. FALLBACK: Gemini 3.1 Flash-Lite (Free Tier) if available and input is more conversational
     if (this.ai) {
       try {
-        const prompt = `You are the safety-critical command translator for the Guardian AI physical AI robot.
-Convert the following user input into a validated robot command.
+        const prompt = `You are the command translator for the Guardian AI physical robot.
+Convert the user request into an allowed robot command.
 
 User input: "${naturalLanguage}"
 
 Allowed commands strictly limited to:
 - FORWARD (moves forward, optional speed 1 to 5)
 - BACKWARD (moves backward, optional speed 1 to 5)
-- LEFT (turns left, optional speed 1 to 5)
-- RIGHT (turns right, optional speed 1 to 5)
-- STOP (stops motors)
-- EMERGENCY_STOP (emergency abort)
+- LEFT (turns chassis left)
+- RIGHT (turns chassis right)
+- LEFT_UP (moves diagonal forward left)
+- RIGHT_UP (moves diagonal forward right)
+- LEFT_DOWN (moves diagonal backward left)
+- RIGHT_DOWN (moves diagonal backward right)
+- ROTATE_LEFT (spins counter-clockwise on spot)
+- ROTATE_RIGHT (spins clockwise on spot)
+- STOP (stops all motors)
 - SET_SPEED (sets motor speed 1 to 5)
 - SET_SERVO (sets camera pan servo angle 0 to 180 degrees)
 - CAPTURE_IMAGE (triggers photo capture)
+- BUZZER_1 (sounds horn/buzzer)
 
 Safety Rules:
-- If ambiguous or hazardous, choose STOP.
-- Speed must be an integer between 1 (slow) and 5 (fast). Default speed is 3.
-- Servo must be an integer between 0 and 180. Center is 90.
+- If ambiguous, choose STOP.
+- Speed must be an integer between 1 and 5.
+- Servo angle must be an integer between 0 and 180.
 
 Return JSON in this exact structure:
 {
-  "command": "FORWARD" | "BACKWARD" | "LEFT" | "RIGHT" | "STOP" | "EMERGENCY_STOP" | "SET_SPEED" | "SET_SERVO" | "CAPTURE_IMAGE",
+  "command": "FORWARD" | "BACKWARD" | "LEFT" | "RIGHT" | "LEFT_UP" | "RIGHT_UP" | "LEFT_DOWN" | "RIGHT_DOWN" | "ROTATE_LEFT" | "ROTATE_RIGHT" | "STOP" | "SET_SPEED" | "SET_SERVO" | "CAPTURE_IMAGE" | "BUZZER_1",
   "speed": number or null,
   "servo": number or null,
   "intentSummary": "string explanation",
@@ -146,7 +131,7 @@ Return JSON in this exact structure:
 }`;
 
         const response = await this.ai.models.generateContent({
-          model: 'gemini-3.8-flash',
+          model: 'gemini-3.1-flash-lite',
           contents: prompt,
           config: {
             responseMimeType: 'application/json',
@@ -156,14 +141,14 @@ Return JSON in this exact structure:
         const text = response.text?.trim() || '';
         const parsed = JSON.parse(text);
 
-        return this.validateModelOutput(parsed, 'GEMINI_3_8_FLASH');
+        return this.validateModelOutput(parsed, 'GEMINI_3_1_FLASH_LITE');
       } catch (err) {
-        console.warn('Gemini command parsing fallback to deterministic parser:', err);
+        console.warn('Gemini 3.1 Flash-Lite fallback notice:', err);
       }
     }
 
-    // 3. DETERMINISTIC SAFETY PARSER (Fallback / Offline)
-    return this.parseDeterministic(sanitizedInput);
+    // Return the informative local result if nothing matched
+    return localResult;
   }
 
   /**
@@ -229,109 +214,307 @@ Return JSON in this exact structure:
   }
 
   private parseDeterministic(input: string): ValidatedAiCommandResult {
-    // Camera captures
+    const text = input.trim().toLowerCase();
+
+    // 1. SAFETY STOP (Immediate priority for any stop/halt/freeze/danger keywords)
     if (
-      input.includes('picture') ||
-      input.includes('photo') ||
-      input.includes('capture') ||
-      input.includes('snapshot') ||
-      input.includes('take a shot')
+      text === 'stop' ||
+      text === 'halt' ||
+      text === 'freeze' ||
+      text.includes('stop') ||
+      text.includes('halt') ||
+      text.includes('freeze') ||
+      text.includes('pause') ||
+      text.includes('brake') ||
+      text.includes('kill switch') ||
+      text.includes('emergency') ||
+      text.includes('danger') ||
+      text.includes('abort') ||
+      text.includes('cut motor')
+    ) {
+      return {
+        valid: true,
+        commandType: 'STOP',
+        intentSummary: 'Stop robot motors immediately',
+        safetyPassed: true,
+        sourceEngine: 'LOCAL_ZERO_COST_ENGINE',
+      };
+    }
+
+    // 2. CAMERA PHOTO CAPTURE
+    if (
+      text.includes('picture') ||
+      text.includes('photo') ||
+      text.includes('capture') ||
+      text.includes('snapshot') ||
+      text.includes('take a shot') ||
+      text.includes('click image')
     ) {
       return {
         valid: true,
         commandType: 'CAPTURE_IMAGE',
         intentSummary: 'Trigger ESP32-CAM optical capture',
         safetyPassed: true,
-        sourceEngine: 'DETERMINISTIC_SAFETY_PARSER',
+        sourceEngine: 'LOCAL_ZERO_COST_ENGINE',
       };
     }
 
-    // Forward
-    if (input.includes('forward') || input.includes('ahead') || input.includes('straight')) {
-      const speed = input.includes('slow') ? 1 : input.includes('fast') ? 4 : 3;
+    // 3. BUZZER / HORN
+    if (
+      text.includes('horn') ||
+      text.includes('beep') ||
+      text.includes('buzzer') ||
+      text.includes('honk')
+    ) {
       return {
         valid: true,
-        commandType: 'FORWARD',
-        speed,
-        intentSummary: `Move robot forward at speed level ${speed}`,
+        commandType: 'BUZZER_1',
+        intentSummary: 'Sound chassis buzzer alert',
         safetyPassed: true,
-        sourceEngine: 'DETERMINISTIC_SAFETY_PARSER',
+        sourceEngine: 'LOCAL_ZERO_COST_ENGINE',
       };
     }
 
-    // Backward
-    if (input.includes('back') || input.includes('reverse')) {
-      const speed = input.includes('slow') ? 1 : input.includes('fast') ? 4 : 2;
+    // Helper: extract speed level 1-5
+    const extractSpeed = (): number => {
+      if (text.includes('speed 1') || text.includes('slow') || text.includes('crawl')) return 1;
+      if (text.includes('speed 2')) return 2;
+      if (text.includes('speed 3') || text.includes('medium') || text.includes('normal')) return 3;
+      if (text.includes('speed 4') || text.includes('fast')) return 4;
+      if (text.includes('speed 5') || text.includes('max') || text.includes('full speed')) return 5;
+      const numMatch = text.match(/\b([1-5])\b/);
+      return numMatch ? parseInt(numMatch[1], 10) : 3;
+    };
+
+    // 4. SPEED ADJUSTMENT DIRECT COMMAND
+    if (
+      text.startsWith('speed') ||
+      text.includes('set speed') ||
+      text.includes('change speed') ||
+      text.includes('cruising speed') ||
+      text === 'slow down' ||
+      text === 'speed up' ||
+      text === 'full speed' ||
+      text === 'max speed'
+    ) {
+      const spd = extractSpeed();
       return {
         valid: true,
-        commandType: 'BACKWARD',
-        speed,
-        intentSummary: `Reverse robot backward at speed level ${speed}`,
+        commandType: 'SET_SPEED',
+        speed: spd,
+        intentSummary: `Set motor cruising speed to level ${spd}`,
         safetyPassed: true,
-        sourceEngine: 'DETERMINISTIC_SAFETY_PARSER',
+        sourceEngine: 'LOCAL_ZERO_COST_ENGINE',
       };
     }
 
-    // Left
-    if (input.includes('left')) {
-      return {
-        valid: true,
-        commandType: 'LEFT',
-        speed: 2,
-        intentSummary: 'Turn robot chassis left',
-        safetyPassed: true,
-        sourceEngine: 'DETERMINISTIC_SAFETY_PARSER',
-      };
-    }
-
-    // Right
-    if (input.includes('right')) {
-      return {
-        valid: true,
-        commandType: 'RIGHT',
-        speed: 2,
-        intentSummary: 'Turn robot chassis right',
-        safetyPassed: true,
-        sourceEngine: 'DETERMINISTIC_SAFETY_PARSER',
-      };
-    }
-
-    // Servo pan
-    if (input.includes('servo') || input.includes('camera angle') || input.includes('look')) {
+    // 5. CAMERA SERVO PAN
+    if (
+      text.includes('servo') ||
+      text.includes('camera angle') ||
+      text.includes('pan camera') ||
+      text.includes('look')
+    ) {
       let angle = 90;
-      if (input.includes('center') || input.includes('middle')) angle = 90;
-      else if (input.includes('left')) angle = 45;
-      else if (input.includes('right')) angle = 135;
+      if (text.includes('center') || text.includes('middle') || text.includes('straight')) {
+        angle = 90;
+      } else if (text.includes('left')) {
+        angle = 45;
+      } else if (text.includes('right')) {
+        angle = 135;
+      } else {
+        const angleMatch = text.match(/\b([0-9]{1,3})\b/);
+        if (angleMatch) {
+          const val = parseInt(angleMatch[1], 10);
+          if (val >= 0 && val <= 180) angle = val;
+        }
+      }
       return {
         valid: true,
         commandType: 'SET_SERVO',
         servo: angle,
         intentSummary: `Orient camera servo to ${angle} degrees`,
         safetyPassed: true,
-        sourceEngine: 'DETERMINISTIC_SAFETY_PARSER',
+        sourceEngine: 'LOCAL_ZERO_COST_ENGINE',
       };
     }
 
-    // Speed setting
-    if (input.includes('speed')) {
-      const match = input.match(/\b([1-5])\b/);
-      const speed = match ? parseInt(match[1], 10) : 3;
+    // 6. ROTATION / SPIN ON SPOT (Check before directional turns)
+    if (
+      text.includes('spin left') ||
+      text.includes('rotate left') ||
+      text.includes('counter clockwise') ||
+      text.includes('anticlockwise') ||
+      text.includes('ccw')
+    ) {
       return {
         valid: true,
-        commandType: 'SET_SPEED',
-        speed,
-        intentSummary: `Set motor cruising speed to level ${speed}`,
+        commandType: 'ROTATE_LEFT',
+        speed: extractSpeed(),
+        intentSummary: 'Spin robot counter-clockwise on spot',
         safetyPassed: true,
-        sourceEngine: 'DETERMINISTIC_SAFETY_PARSER',
+        sourceEngine: 'LOCAL_ZERO_COST_ENGINE',
+      };
+    }
+
+    if (
+      text.includes('spin right') ||
+      text.includes('rotate right') ||
+      text.includes('clockwise') ||
+      text.includes('cw')
+    ) {
+      return {
+        valid: true,
+        commandType: 'ROTATE_RIGHT',
+        speed: extractSpeed(),
+        intentSummary: 'Spin robot clockwise on spot',
+        safetyPassed: true,
+        sourceEngine: 'LOCAL_ZERO_COST_ENGINE',
+      };
+    }
+
+    // 7. DIAGONAL MOVEMENTS (Check before straight/turn)
+    if (
+      text.includes('forward left') ||
+      text.includes('front left') ||
+      text.includes('ahead left') ||
+      text.includes('left up') ||
+      text.includes('up left') ||
+      text.includes('diagonal left up')
+    ) {
+      return {
+        valid: true,
+        commandType: 'LEFT_UP',
+        speed: extractSpeed(),
+        intentSummary: 'Move robot diagonally forward-left',
+        safetyPassed: true,
+        sourceEngine: 'LOCAL_ZERO_COST_ENGINE',
+      };
+    }
+
+    if (
+      text.includes('forward right') ||
+      text.includes('front right') ||
+      text.includes('ahead right') ||
+      text.includes('right up') ||
+      text.includes('up right') ||
+      text.includes('diagonal right up')
+    ) {
+      return {
+        valid: true,
+        commandType: 'RIGHT_UP',
+        speed: extractSpeed(),
+        intentSummary: 'Move robot diagonally forward-right',
+        safetyPassed: true,
+        sourceEngine: 'LOCAL_ZERO_COST_ENGINE',
+      };
+    }
+
+    if (
+      text.includes('backward left') ||
+      text.includes('back left') ||
+      text.includes('reverse left') ||
+      text.includes('left down') ||
+      text.includes('down left') ||
+      text.includes('diagonal left down')
+    ) {
+      return {
+        valid: true,
+        commandType: 'LEFT_DOWN',
+        speed: extractSpeed(),
+        intentSummary: 'Move robot diagonally backward-left',
+        safetyPassed: true,
+        sourceEngine: 'LOCAL_ZERO_COST_ENGINE',
+      };
+    }
+
+    if (
+      text.includes('backward right') ||
+      text.includes('back right') ||
+      text.includes('reverse right') ||
+      text.includes('right down') ||
+      text.includes('down right') ||
+      text.includes('diagonal right down')
+    ) {
+      return {
+        valid: true,
+        commandType: 'RIGHT_DOWN',
+        speed: extractSpeed(),
+        intentSummary: 'Move robot diagonally backward-right',
+        safetyPassed: true,
+        sourceEngine: 'LOCAL_ZERO_COST_ENGINE',
+      };
+    }
+
+    // 8. STRAIGHT MOVEMENTS
+    if (
+      text.includes('forward') ||
+      text.includes('ahead') ||
+      text.includes('straight') ||
+      text.includes('front') ||
+      text.includes('advance') ||
+      text === 'go' ||
+      text.startsWith('go ahead') ||
+      text.startsWith('move forward')
+    ) {
+      const speed = extractSpeed();
+      return {
+        valid: true,
+        commandType: 'FORWARD',
+        speed,
+        intentSummary: `Move robot forward at speed level ${speed}`,
+        safetyPassed: true,
+        sourceEngine: 'LOCAL_ZERO_COST_ENGINE',
+      };
+    }
+
+    if (
+      text.includes('back') ||
+      text.includes('reverse') ||
+      text.includes('retreat') ||
+      text.startsWith('go back') ||
+      text.startsWith('move back')
+    ) {
+      const speed = extractSpeed();
+      return {
+        valid: true,
+        commandType: 'BACKWARD',
+        speed,
+        intentSummary: `Reverse robot backward at speed level ${speed}`,
+        safetyPassed: true,
+        sourceEngine: 'LOCAL_ZERO_COST_ENGINE',
+      };
+    }
+
+    // 9. CHASSIS TURNS
+    if (text.includes('left')) {
+      return {
+        valid: true,
+        commandType: 'LEFT',
+        speed: extractSpeed(),
+        intentSummary: 'Turn robot chassis left',
+        safetyPassed: true,
+        sourceEngine: 'LOCAL_ZERO_COST_ENGINE',
+      };
+    }
+
+    if (text.includes('right')) {
+      return {
+        valid: true,
+        commandType: 'RIGHT',
+        speed: extractSpeed(),
+        intentSummary: 'Turn robot chassis right',
+        safetyPassed: true,
+        sourceEngine: 'LOCAL_ZERO_COST_ENGINE',
       };
     }
 
     return {
       valid: false,
-      intentSummary: `Could not safely match "${input}" to any approved robot movement or camera instruction`,
+      intentSummary: `Could not match "${input}" to any robot movement. Try "Forward", "Reverse", "Turn Left", "Turn Right", "Spin Left", "Speed 4", or "Stop".`,
       safetyPassed: false,
       safetyReason: 'Unrecognized action intent',
-      sourceEngine: 'DETERMINISTIC_SAFETY_PARSER',
+      sourceEngine: 'LOCAL_ZERO_COST_ENGINE',
     };
   }
 
